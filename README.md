@@ -4,6 +4,8 @@ A 1D convolutional network that reads raw ECG from the [MIT-BIH Arrhythmia Datab
 
 The main point of the project is evaluation. About 9 in 10 beats are normal, so accuracy tells you very little. Every result below reports **per-class recall**, and the headline numbers come from an **inter-patient split**: the model is tested on 22 people it never saw in training.
 
+**Full walkthrough** of the task, data, code and results: [WALKTHROUGH.md](WALKTHROUGH.md)
+
 **Demo:** [`results/demo_record_200.mp4`](results/demo_record_200.mp4) shows the model reading an unseen patient's ECG beat by beat, with its prediction above each beat and the cardiologist's label below.
 
 ## Results
