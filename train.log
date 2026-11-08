@@ -1,0 +1,73 @@
+100640 beats, class counts {'N': 90052, 'S': 2780, 'V': 7006, 'F': 802}
+
+== beat_split/unweighted: train 70448 / test 30192
+  epoch 1/15 loss 0.1035
+  epoch 2/15 loss 0.1695
+  epoch 3/15 loss 0.1985
+  epoch 4/15 loss 0.0444
+  epoch 5/15 loss 0.1557
+  epoch 6/15 loss 0.0825
+  epoch 7/15 loss 0.2997
+  epoch 8/15 loss 0.0638
+  epoch 9/15 loss 0.1653
+  epoch 10/15 loss 0.0786
+  epoch 11/15 loss 0.1293
+  epoch 12/15 loss 0.0434
+  epoch 13/15 loss 0.0100
+  epoch 14/15 loss 0.0436
+  epoch 15/15 loss 0.1184
+  acc 0.983  recall N 0.991  S 0.826  V 0.981  F 0.639
+
+== beat_split/weighted: train 70448 / test 30192
+  epoch 1/15 loss 0.6286
+  epoch 2/15 loss 0.7549
+  epoch 3/15 loss 0.4986
+  epoch 4/15 loss 0.1129
+  epoch 5/15 loss 0.3497
+  epoch 6/15 loss 0.4847
+  epoch 7/15 loss 1.6137
+  epoch 8/15 loss 0.1398
+  epoch 9/15 loss 0.6492
+  epoch 10/15 loss 0.0834
+  epoch 11/15 loss 0.6499
+  epoch 12/15 loss 0.4734
+  epoch 13/15 loss 0.0598
+  epoch 14/15 loss 0.1995
+  epoch 15/15 loss 0.3372
+  acc 0.941  recall N 0.942  S 0.850  V 0.955  F 0.925
+
+== patient_split/unweighted: train 50973 / test 49667
+  epoch 1/15 loss 0.1498
+  epoch 2/15 loss 0.1423
+  epoch 3/15 loss 0.0167
+  epoch 4/15 loss 0.0239
+  epoch 5/15 loss 0.0332
+  epoch 6/15 loss 0.0054
+  epoch 7/15 loss 0.0901
+  epoch 8/15 loss 0.0114
+  epoch 9/15 loss 0.0073
+  epoch 10/15 loss 0.0576
+  epoch 11/15 loss 0.0483
+  epoch 12/15 loss 0.0191
+  epoch 13/15 loss 0.0320
+  epoch 14/15 loss 0.0044
+  epoch 15/15 loss 0.0265
+  acc 0.923  recall N 0.996  S 0.000  V 0.558  F 0.000
+
+== patient_split/weighted: train 50973 / test 49667
+  epoch 1/15 loss 0.4074
+  epoch 2/15 loss 0.5894
+  epoch 3/15 loss 0.3021
+  epoch 4/15 loss 0.1487
+  epoch 5/15 loss 0.0638
+  epoch 6/15 loss 0.1152
+  epoch 7/15 loss 0.0930
+  epoch 8/15 loss 0.1471
+  epoch 9/15 loss 0.1459
+  epoch 10/15 loss 0.2842
+  epoch 11/15 loss 0.0988
+  epoch 12/15 loss 0.1935
+  epoch 13/15 loss 0.3556
+  epoch 14/15 loss 0.1460
+  epoch 15/15 loss 0.2846
+  acc 0.691  recall N 0.705  S 0.057  V 0.942  F 0.021
