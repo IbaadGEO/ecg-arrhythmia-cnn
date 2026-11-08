@@ -1,0 +1,141 @@
+{
+  "created": "2026-11-08 19:01:01",
+  "command": "run_experiments.py --out runs/strict_2026-11-08",
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "configs": {
+    "cnn/plain": {
+      "use_rr": false,
+      "weighted": false
+    },
+    "cnn/weighted": {
+      "use_rr": false,
+      "weighted": true
+    },
+    "cnn+rr/plain": {
+      "use_rr": true,
+      "weighted": false
+    },
+    "cnn+rr/weighted": {
+      "use_rr": true,
+      "weighted": true
+    }
+  },
+  "hyperparameters": {
+    "lr": 0.001,
+    "batch": 256,
+    "max_epochs": 40,
+    "patience": 6,
+    "select_on": "val macro_f1"
+  },
+  "preprocessing": {
+    "fs": 360,
+    "half_window": 252,
+    "lead": "MLII",
+    "window_norm": "z-score per window",
+    "rr_features": [
+      "pre/mean",
+      "post/mean",
+      "local10/mean",
+      "pre/post"
+    ],
+    "rr_mean": "whole-recording mean RR (non-causal)",
+    "beat_locations": "expert annotations (.atr)"
+  },
+  "records": {
+    "train": [
+      101,
+      108,
+      109,
+      112,
+      114,
+      115,
+      116,
+      118,
+      119,
+      201,
+      203,
+      207,
+      208,
+      209,
+      215,
+      230
+    ],
+    "val": [
+      106,
+      122,
+      124,
+      205,
+      220,
+      223
+    ],
+    "test_strict": [
+      100,
+      103,
+      105,
+      111,
+      113,
+      117,
+      121,
+      123,
+      200,
+      210,
+      212,
+      213,
+      214,
+      219,
+      221,
+      222,
+      228,
+      231,
+      232,
+      233,
+      234
+    ],
+    "test_conventional": [
+      100,
+      103,
+      105,
+      111,
+      113,
+      117,
+      121,
+      123,
+      200,
+      202,
+      210,
+      212,
+      213,
+      214,
+      219,
+      221,
+      222,
+      228,
+      231,
+      232,
+      233,
+      234
+    ]
+  },
+  "subject_map_exceptions": {
+    "202": 201
+  },
+  "conventional_shared_subjects": [
+    201
+  ],
+  "threshold_rule": "alarm if 1 - p(N) >= t; t maximises alarm F1 on validation",
+  "versions": {
+    "torch": "2.14.1+cu126",
+    "numpy": "2.5.4",
+    "wfdb": "4.3.1",
+    "scikit-learn": "1.9.1",
+    "matplotlib": "3.11.2",
+    "python": "3.13.7",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "cuda": "12.6",
+    "gpu": "NVIDIA GeForce RTX 3060 Ti"
+  }
+}

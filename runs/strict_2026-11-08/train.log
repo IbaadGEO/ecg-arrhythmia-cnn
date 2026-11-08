@@ -1,0 +1,222 @@
+loading records ...
+
+== cnn/plain seed 0
+    epoch  1 loss 0.2132  val macroF1 0.516
+    epoch  2 loss 0.1125  val macroF1 0.437
+    epoch  3 loss 0.0891  val macroF1 0.549
+    epoch  4 loss 0.0745  val macroF1 0.388
+    epoch  5 loss 0.0686  val macroF1 0.548
+    epoch  6 loss 0.0635  val macroF1 0.554
+    epoch  7 loss 0.0546  val macroF1 0.369
+    epoch  8 loss 0.0512  val macroF1 0.447
+    epoch  9 loss 0.0469  val macroF1 0.541
+    epoch 10 loss 0.0457  val macroF1 0.492
+    epoch 11 loss 0.0420  val macroF1 0.478
+    epoch 12 loss 0.0385  val macroF1 0.495
+  best epoch 6, val macroF1 0.554, threshold 0.71 | strict test: S 0.003 V 0.926 F 0.000 flag 0.635 prec 0.417 FPR 0.113
+
+== cnn/plain seed 1
+    epoch  1 loss 0.2368  val macroF1 0.289
+    epoch  2 loss 0.1183  val macroF1 0.453
+    epoch  3 loss 0.0896  val macroF1 0.415
+    epoch  4 loss 0.0772  val macroF1 0.473
+    epoch  5 loss 0.0678  val macroF1 0.478
+    epoch  6 loss 0.0618  val macroF1 0.564
+    epoch  7 loss 0.0548  val macroF1 0.554
+    epoch  8 loss 0.0528  val macroF1 0.564
+    epoch  9 loss 0.0479  val macroF1 0.450
+    epoch 10 loss 0.0458  val macroF1 0.585
+    epoch 11 loss 0.0443  val macroF1 0.520
+    epoch 12 loss 0.0401  val macroF1 0.523
+    epoch 13 loss 0.0401  val macroF1 0.449
+    epoch 14 loss 0.0352  val macroF1 0.446
+    epoch 15 loss 0.0331  val macroF1 0.462
+    epoch 16 loss 0.0329  val macroF1 0.518
+  best epoch 10, val macroF1 0.585, threshold 0.83 | strict test: S 0.006 V 0.869 F 0.183 flag 0.671 prec 0.322 FPR 0.179
+
+== cnn/plain seed 2
+    epoch  1 loss 0.2557  val macroF1 0.440
+    epoch  2 loss 0.1206  val macroF1 0.465
+    epoch  3 loss 0.0924  val macroF1 0.396
+    epoch  4 loss 0.0760  val macroF1 0.394
+    epoch  5 loss 0.0667  val macroF1 0.481
+    epoch  6 loss 0.0618  val macroF1 0.510
+    epoch  7 loss 0.0556  val macroF1 0.553
+    epoch  8 loss 0.0525  val macroF1 0.419
+    epoch  9 loss 0.0504  val macroF1 0.443
+    epoch 10 loss 0.0435  val macroF1 0.480
+    epoch 11 loss 0.0406  val macroF1 0.502
+    epoch 12 loss 0.0385  val macroF1 0.534
+    epoch 13 loss 0.0398  val macroF1 0.531
+  best epoch 7, val macroF1 0.553, threshold 0.5 | strict test: S 0.002 V 0.916 F 0.000 flag 0.650 prec 0.537 FPR 0.072
+
+== cnn/weighted seed 0
+    epoch  1 loss 0.5983  val macroF1 0.437
+    epoch  2 loss 0.3653  val macroF1 0.426
+    epoch  3 loss 0.3032  val macroF1 0.452
+    epoch  4 loss 0.2759  val macroF1 0.604
+    epoch  5 loss 0.2341  val macroF1 0.470
+    epoch  6 loss 0.2425  val macroF1 0.545
+    epoch  7 loss 0.1941  val macroF1 0.496
+    epoch  8 loss 0.1887  val macroF1 0.482
+    epoch  9 loss 0.1671  val macroF1 0.514
+    epoch 10 loss 0.1511  val macroF1 0.223
+  best epoch 4, val macroF1 0.604, threshold 0.53 | strict test: S 0.016 V 0.869 F 0.054 flag 0.647 prec 0.352 FPR 0.152
+
+== cnn/weighted seed 1
+    epoch  1 loss 0.5968  val macroF1 0.346
+    epoch  2 loss 0.3812  val macroF1 0.437
+    epoch  3 loss 0.3017  val macroF1 0.492
+    epoch  4 loss 0.2755  val macroF1 0.545
+    epoch  5 loss 0.2445  val macroF1 0.501
+    epoch  6 loss 0.2192  val macroF1 0.515
+    epoch  7 loss 0.2120  val macroF1 0.569
+    epoch  8 loss 0.1874  val macroF1 0.462
+    epoch  9 loss 0.1850  val macroF1 0.495
+    epoch 10 loss 0.1632  val macroF1 0.327
+    epoch 11 loss 0.1720  val macroF1 0.594
+    epoch 12 loss 0.1472  val macroF1 0.415
+    epoch 13 loss 0.1384  val macroF1 0.558
+    epoch 14 loss 0.1414  val macroF1 0.556
+    epoch 15 loss 0.1226  val macroF1 0.531
+    epoch 16 loss 0.1140  val macroF1 0.559
+    epoch 17 loss 0.1150  val macroF1 0.571
+  best epoch 11, val macroF1 0.594, threshold 0.77 | strict test: S 0.051 V 0.840 F 0.481 flag 0.717 prec 0.236 FPR 0.296
+
+== cnn/weighted seed 2
+    epoch  1 loss 0.5677  val macroF1 0.459
+    epoch  2 loss 0.3709  val macroF1 0.543
+    epoch  3 loss 0.3246  val macroF1 0.445
+    epoch  4 loss 0.2619  val macroF1 0.551
+    epoch  5 loss 0.2412  val macroF1 0.550
+    epoch  6 loss 0.2232  val macroF1 0.561
+    epoch  7 loss 0.2069  val macroF1 0.549
+    epoch  8 loss 0.1743  val macroF1 0.391
+    epoch  9 loss 0.1834  val macroF1 0.574
+    epoch 10 loss 0.1472  val macroF1 0.445
+    epoch 11 loss 0.1405  val macroF1 0.532
+    epoch 12 loss 0.1407  val macroF1 0.535
+    epoch 13 loss 0.1296  val macroF1 0.501
+    epoch 14 loss 0.1267  val macroF1 0.565
+    epoch 15 loss 0.1204  val macroF1 0.478
+  best epoch 9, val macroF1 0.574, threshold 0.37 | strict test: S 0.029 V 0.795 F 0.003 flag 0.501 prec 0.444 FPR 0.080
+
+== cnn+rr/plain seed 0
+    epoch  1 loss 0.2140  val macroF1 0.452
+    epoch  2 loss 0.1104  val macroF1 0.503
+    epoch  3 loss 0.0884  val macroF1 0.536
+    epoch  4 loss 0.0748  val macroF1 0.481
+    epoch  5 loss 0.0667  val macroF1 0.568
+    epoch  6 loss 0.0602  val macroF1 0.536
+    epoch  7 loss 0.0564  val macroF1 0.390
+    epoch  8 loss 0.0494  val macroF1 0.531
+    epoch  9 loss 0.0478  val macroF1 0.465
+    epoch 10 loss 0.0459  val macroF1 0.518
+    epoch 11 loss 0.0407  val macroF1 0.522
+  best epoch 5, val macroF1 0.568, threshold 0.71 | strict test: S 0.005 V 0.902 F 0.000 flag 0.574 prec 0.416 FPR 0.103
+
+== cnn+rr/plain seed 1
+    epoch  1 loss 0.2318  val macroF1 0.270
+    epoch  2 loss 0.1150  val macroF1 0.475
+    epoch  3 loss 0.0877  val macroF1 0.497
+    epoch  4 loss 0.0743  val macroF1 0.481
+    epoch  5 loss 0.0661  val macroF1 0.527
+    epoch  6 loss 0.0625  val macroF1 0.556
+    epoch  7 loss 0.0531  val macroF1 0.500
+    epoch  8 loss 0.0509  val macroF1 0.524
+    epoch  9 loss 0.0502  val macroF1 0.540
+    epoch 10 loss 0.0443  val macroF1 0.519
+    epoch 11 loss 0.0416  val macroF1 0.440
+    epoch 12 loss 0.0411  val macroF1 0.561
+    epoch 13 loss 0.0389  val macroF1 0.523
+    epoch 14 loss 0.0355  val macroF1 0.467
+    epoch 15 loss 0.0338  val macroF1 0.497
+    epoch 16 loss 0.0315  val macroF1 0.493
+    epoch 17 loss 0.0334  val macroF1 0.536
+    epoch 18 loss 0.0288  val macroF1 0.495
+  best epoch 12, val macroF1 0.561, threshold 0.82 | strict test: S 0.025 V 0.912 F 0.000 flag 0.700 prec 0.454 FPR 0.107
+
+== cnn+rr/plain seed 2
+    epoch  1 loss 0.2658  val macroF1 0.479
+    epoch  2 loss 0.1218  val macroF1 0.507
+    epoch  3 loss 0.0919  val macroF1 0.484
+    epoch  4 loss 0.0776  val macroF1 0.340
+    epoch  5 loss 0.0697  val macroF1 0.444
+    epoch  6 loss 0.0618  val macroF1 0.466
+    epoch  7 loss 0.0552  val macroF1 0.537
+    epoch  8 loss 0.0548  val macroF1 0.416
+    epoch  9 loss 0.0520  val macroF1 0.465
+    epoch 10 loss 0.0454  val macroF1 0.449
+    epoch 11 loss 0.0437  val macroF1 0.491
+    epoch 12 loss 0.0396  val macroF1 0.442
+    epoch 13 loss 0.0382  val macroF1 0.555
+    epoch 14 loss 0.0365  val macroF1 0.486
+    epoch 15 loss 0.0339  val macroF1 0.551
+    epoch 16 loss 0.0332  val macroF1 0.476
+    epoch 17 loss 0.0323  val macroF1 0.457
+    epoch 18 loss 0.0296  val macroF1 0.542
+    epoch 19 loss 0.0304  val macroF1 0.467
+  best epoch 13, val macroF1 0.555, threshold 0.85 | strict test: S 0.034 V 0.952 F 0.013 flag 0.855 prec 0.343 FPR 0.209
+
+== cnn+rr/weighted seed 0
+    epoch  1 loss 0.5850  val macroF1 0.464
+    epoch  2 loss 0.3617  val macroF1 0.433
+    epoch  3 loss 0.2874  val macroF1 0.543
+    epoch  4 loss 0.2773  val macroF1 0.532
+    epoch  5 loss 0.2270  val macroF1 0.467
+    epoch  6 loss 0.2145  val macroF1 0.565
+    epoch  7 loss 0.2030  val macroF1 0.567
+    epoch  8 loss 0.1798  val macroF1 0.539
+    epoch  9 loss 0.1638  val macroF1 0.576
+    epoch 10 loss 0.1657  val macroF1 0.368
+    epoch 11 loss 0.1477  val macroF1 0.539
+    epoch 12 loss 0.1332  val macroF1 0.587
+    epoch 13 loss 0.1162  val macroF1 0.533
+    epoch 14 loss 0.1144  val macroF1 0.550
+    epoch 15 loss 0.1164  val macroF1 0.575
+    epoch 16 loss 0.1303  val macroF1 0.552
+    epoch 17 loss 0.0987  val macroF1 0.530
+    epoch 18 loss 0.0959  val macroF1 0.523
+  best epoch 12, val macroF1 0.587, threshold 0.49 | strict test: S 0.019 V 0.832 F 0.005 flag 0.518 prec 0.422 FPR 0.090
+
+== cnn+rr/weighted seed 1
+    epoch  1 loss 0.5909  val macroF1 0.456
+    epoch  2 loss 0.3562  val macroF1 0.372
+    epoch  3 loss 0.2971  val macroF1 0.468
+    epoch  4 loss 0.2696  val macroF1 0.533
+    epoch  5 loss 0.2226  val macroF1 0.413
+    epoch  6 loss 0.2128  val macroF1 0.561
+    epoch  7 loss 0.2032  val macroF1 0.551
+    epoch  8 loss 0.1816  val macroF1 0.536
+    epoch  9 loss 0.1731  val macroF1 0.507
+    epoch 10 loss 0.1565  val macroF1 0.520
+    epoch 11 loss 0.1548  val macroF1 0.603
+    epoch 12 loss 0.1438  val macroF1 0.553
+    epoch 13 loss 0.1354  val macroF1 0.460
+    epoch 14 loss 0.1247  val macroF1 0.585
+    epoch 15 loss 0.1134  val macroF1 0.473
+    epoch 16 loss 0.1383  val macroF1 0.544
+    epoch 17 loss 0.1155  val macroF1 0.489
+  best epoch 11, val macroF1 0.603, threshold 0.56 | strict test: S 0.044 V 0.808 F 0.357 flag 0.636 prec 0.377 FPR 0.134
+
+== cnn+rr/weighted seed 2
+    epoch  1 loss 0.5857  val macroF1 0.505
+    epoch  2 loss 0.3569  val macroF1 0.542
+    epoch  3 loss 0.2987  val macroF1 0.389
+    epoch  4 loss 0.2572  val macroF1 0.437
+    epoch  5 loss 0.2292  val macroF1 0.565
+    epoch  6 loss 0.2102  val macroF1 0.548
+    epoch  7 loss 0.1870  val macroF1 0.569
+    epoch  8 loss 0.1779  val macroF1 0.457
+    epoch  9 loss 0.1609  val macroF1 0.488
+    epoch 10 loss 0.1478  val macroF1 0.506
+    epoch 11 loss 0.1573  val macroF1 0.591
+    epoch 12 loss 0.1414  val macroF1 0.581
+    epoch 13 loss 0.1263  val macroF1 0.464
+    epoch 14 loss 0.1195  val macroF1 0.550
+    epoch 15 loss 0.1173  val macroF1 0.519
+    epoch 16 loss 0.1113  val macroF1 0.543
+    epoch 17 loss 0.1088  val macroF1 0.495
+  best epoch 11, val macroF1 0.591, threshold 0.66 | strict test: S 0.040 V 0.930 F 0.003 flag 0.612 prec 0.322 FPR 0.164
+
+selected model: checkpoints/cnn+rr_weighted_seed1.pt  -> wrote runs\strict_2026-11-08

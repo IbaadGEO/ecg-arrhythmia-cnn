@@ -1,254 +1,268 @@
-# Project Walkthrough: Flagging Abnormal Heartbeats with a 1D CNN
+# Project Walkthrough: Classifying Heartbeats with a 1D CNN
 
-This document goes through the project from start to finish: the problem, the data, each part of the code, the results and what they mean. The [README](README.md) is the short version; this is the long one.
+This document goes through the project from start to finish: the question, the data, how it is split, each part of the code, the results and their limits. The [README](README.md) is the short version, and [runs/strict_2026-11-08/summary.md](runs/strict_2026-11-08/summary.md) holds every number with its counts.
 
 ---
 
 ## 1. The task
 
-An **electrocardiogram (ECG)** records the heart's electrical activity as a wave. Each heartbeat makes a recognisable shape: a small bump (P wave), a sharp spike (the QRS complex, whose tallest point is the **R peak**), then another bump (T wave).
+An **ECG** records the heart's electrical activity. Each beat makes a recognisable wave whose sharpest spike, the QRS complex, peaks at the **R peak**. The AAMI EC57 standard groups beat types into four classes:
 
-Most beats are normal. Some aren't, and cardiologists group the abnormal ones by where in the heart they start:
+| Class | What it contains | What it looks like |
+|---|---|---|
+| **N group** | Normal sinus beats **plus** bundle branch block (L, R) and atrial/nodal escape beats (e, j) | Mostly the regular shape and rhythm. Not every N-group beat is ordinary sinus rhythm |
+| **S** supraventricular | Premature beats from the atria or AV junction (A, a, J, S) | Shape close to normal, but **early** |
+| **V** ventricular | Premature ventricular contractions and ventricular escape (V, E) | Wide, tall, unusual QRS |
+| **F** fusion | A normal and a ventricular beat firing together (F) | A mix of the two |
 
-| Class | Name | What it is | How it looks |
-|---|---|---|---|
-| **N** | Normal | The heart's regular pacemaker fires as usual | The standard shape at a steady rhythm |
-| **S** | Supraventricular | An early beat that starts in the upper chambers (atria) | Shape *nearly identical to normal*, but it **arrives early** |
-| **V** | Ventricular | A beat that starts in the lower chambers (ventricles) | **Wide, tall, oddly shaped** spike; easy to see |
-| **F** | Fusion | A normal beat and a ventricular beat firing at the same time | A mix of the two shapes |
+**The project's question:** does **class-weighted** cross-entropy improve **per-class recall** on the rare classes (S, V, F), compared with plain cross-entropy, for people the model was not trained on?
 
-**Goal:** build a model that reads a raw ECG recording and labels every beat as N, S, V or F, so the abnormal ones get flagged.
+**What the model does:** for each beat whose **location a cardiologist annotated**, it decides which class it is. This is offline classification. It does not find beats by itself and does not run live.
 
-### Why this is harder than it sounds
+### Two different questions
 
-1. **Class imbalance.** About 9 in 10 beats are normal. A model that always says "normal" scores about 90% accuracy and is useless. So the project measures **recall per class**: of all the real ventricular beats, what fraction did the model catch?
-2. **New patients.** Every heart's ECG looks slightly different. A model that has seen beats from a patient can recognise that patient's shapes. What matters in practice is how it does on **patients it has never seen**.
+- **Exact class:** is a V beat called V? (4-class argmax, per-class recall and precision)
+- **Abnormal flag:** is an S/V/F beat called *anything other than N*? (flag recall and precision)
 
----
-
-## 2. The data: MIT-BIH Arrhythmia Database
-
-- **48 recordings**, each **30 minutes** long, from 47 people, recorded at Boston's Beth Israel Hospital (1975–79).
-- Sampled at **360 Hz**, meaning 360 readings per second, with two leads (two views of the heart). We use the **MLII** lead, which shows the QRS spike most clearly.
-- **Every beat was labelled by two or more cardiologists.** That's about 110,000 labels, stored in `.atr` annotation files. Each label is a position (sample number of the R peak) plus a symbol such as `N`, `V` or `A`.
-
-Files per recording (for example `100.*`): `.dat` is the signal, `.hea` is the header (sample rate, lead names) and `.atr` holds the cardiologist annotations.
-
-The **Kaggle dataset** and the **Kachuee et al. paper** contain the same data already cut into beats. This project uses the raw recordings instead, because the Kaggle version doesn't say which patient each beat came from, so you can't split train and test by patient.
+A model can flag an S beat by calling it V. That counts as flagged, but the class is wrong. Both are reported, separately.
 
 ---
 
-## 3. Project layout
+## 2. The data
 
-```
-ecg-arrhythmia-cnn/
-├── ecg.py              # load data → cut beats → train 8 models → write results
-├── demo.py             # render the demo video with a trained model
-├── requirements.txt
-├── README.md           # short summary
-├── WALKTHROUGH.md      # this file
-├── train.log           # full console output of the last training run
-├── data/mitdb/         # raw recordings (not committed; download from PhysioNet)
-└── results/
-    ├── metrics.json                  # every number, for all 8 experiments
-    ├── recall.png                    # per-class recall chart
-    ├── confusion_patient_split.png   # confusion matrices
-    ├── cnn_*.pt, cnn+rr_*.pt         # trained models (unseen-patient split only)
-    └── demo_record_200.mp4           # the demo video
-```
+- **MIT-BIH Arrhythmia Database:** 48 half-hour two-lead recordings at 360 Hz, from **47 people**. Records **201 and 202 come from the same person**; the `202.hea` header says it was "taken from the same analog tape as record 201".
+- Every beat was labelled by two or more cardiologists (`.atr` files).
+- The **MLII** lead is used. It is looked up by name, because record 114 stores it on the second channel.
+- The 4 paced recordings (102, 104, 107, 217) are excluded by AAMI convention.
 
 ---
 
-## 4. `ecg.py`, step by step
+## 3. Splitting by person
 
-### 4.1 Settings and label groups ([ecg.py:17-31](ecg.py:17))
+[`ecgcnn/data.py:19-39`](ecgcnn/data.py:19)
 
 ```python
-AAMI = {**dict.fromkeys("NLRej", 0), **dict.fromkeys("AaJS", 1), **dict.fromkeys("VE", 2), "F": 3}
+SUBJECT = {r: r for r in ALL_RECORDS} | {202: 201}
+VAL = [106, 122, 124, 205, 220, 223]
+SPLITS = {"strict": {...test: DS2 without 202}, "conventional": {...test: DS2}}
 ```
 
-MIT-BIH uses about 15 beat symbols. The **AAMI EC57** standard is the industry convention for grouping them into the four classes:
+- **DS1/DS2** (de Chazal et al., 2004) is the standard inter-patient split. It puts 201 in DS1 and 202 in DS2, so the same person appears on both sides. Disjoint *record* IDs do not guarantee disjoint *people*.
+- **Strict split (headline):** the 22 DS1 recordings are used for development (**16 train + 6 validation**), and **21 test recordings** (DS2 without 202) are used for testing. No person is in two partitions.
+- **Conventional split:** full DS2, reported only for comparison, with the 201/202 exception documented.
+- `check_subject_disjoint()` ([data.py:52](ecgcnn/data.py:52)) raises an error if any two partitions share a subject. It runs when experiments start ([run_experiments.py:56](run_experiments.py:56)), and the demo and explorer use the same subject map to decide which recordings a model may be shown ([inference.py:10](ecgcnn/inference.py:10)).
+- **Validation partition:** fixed and chosen so all four classes are present (S 201, V 1,111, F 30 beats). Record 208, which holds nearly all DS1 fusion beats, and the S-heavy records 209, 201, 207 and 118 stay in training. It is a single partition, not cross-validation.
 
-- **N** ← `N` normal, `L`/`R` bundle branch block, `e`/`j` escape beats
-- **S** ← `A` atrial premature, `a` aberrated atrial premature, `J` junctional premature, `S` supraventricular premature
-- **V** ← `V` premature ventricular contraction, `E` ventricular escape
-- **F** ← `F` fusion
+| Partition | Recordings | Beats (N / S / V / F) |
+|---|---|---|
+| Train | 16 | 37,553 (33,751 / 742 / 2,676 / 384) |
+| Validation | 6 | 13,420 (12,078 / 201 / 1,111 / 30) |
+| Strict test | 21 | 47,532 (42,163 / 1,782 / 3,200 / 387) |
 
-Paced beats (`/`, `f`) and unclassifiable beats (`Q`) aren't given a class. They are still counted as heartbeats when measuring time between beats (`BEATS`, line 22).
+**Honesty note:** DS2 results had already been looked at during the first version of the project (`historical/v1`). The revised protocol makes every choice on validation data, but DS2 is not a pristine holdout.
 
-```python
-DS1 = [101, 106, ...]   # 22 training patients
-DS2 = [100, 103, ...]   # 22 test patients
-assert not set(DS1) & set(DS2)
-```
+---
 
-This is the **patient split** from de Chazal et al. (2004), the standard one in the research literature. Four records (102, 104, 107, 217) come from patients with pacemakers and are left out by convention. The `assert` guarantees that no patient is in both lists.
+## 4. Preprocessing
 
-`HALF = 252` sets the window size: 252 samples is 0.7 s on each side of the R peak.
+[`data.py:64-112`](ecgcnn/data.py:64)
 
-### 4.2 RR-interval features ([ecg.py:33-46](ecg.py:33))
+### 4.1 Beat windows
 
-The **RR interval** is the time between one beat's R peak and the next. It captures *timing*, which is the main clue for supraventricular beats, since they arrive early.
+For each annotated beat in the four classes:
+1. Take **504 samples** (±0.7 s, 1.4 s in total) centred on the annotated R peak.
+2. **Z-score** the window, to remove differences in amplitude and baseline.
+3. Skip beats too close to the recording's start or end to fit a full window.
 
-For every beat the code computes 4 numbers:
+Neighbouring windows **overlap**, because a 1.4 s window usually contains parts of the beats on either side. That matters for the random beat split used in v1: a test window can share samples with a training window, which makes that split even more optimistic.
+
+### 4.2 RR-interval features
+
+The RR interval is the time between consecutive R peaks. For each beat:
 
 | Feature | Meaning |
 |---|---|
-| `pre / mean` | Time since the previous beat, relative to this patient's average |
-| `post / mean` | Time until the next beat, relative to the average |
-| `local / mean` | Average of the last 10 RR intervals, relative to the average |
-| `pre / post` | Previous gap divided by next gap; well below 1 means "early beat, then a pause" |
+| `pre / mean` | previous RR ÷ the recording's mean RR |
+| `post / mean` | **next** RR ÷ mean RR |
+| `local / mean` | mean of the last 10 RRs ÷ mean RR |
+| `pre / post` | well below 1 means "early beat, then a pause" |
 
-Dividing by the **patient's own average** matters. Different people have different resting heart rates, so a raw 0.6 s gap is normal for one person and early for another. Ratios carry over between patients.
+These features are **offline-only**. They use the **next** beat, and they divide by the **whole recording's** mean RR, which includes the future. The demo waits until the next beat has arrived before it shows a label, but that only hides the first problem; whole-record normalisation would still not be possible in a live monitor.
 
-A small **self-check** runs every time the module loads (lines 44-46). It builds a fake rhythm with one early beat and asserts that the features flag it.
+Input checks: fewer than 3 beats, or non-increasing beat positions, raise a clear `ValueError`. So do missing `.hea/.dat/.atr` files and a missing MLII lead. All of these are unit-tested.
 
-### 4.3 Cutting beats into windows ([ecg.py:49-64](ecg.py:49))
+---
 
-```python
-r = wfdb.rdrecord(...)                          # read the signal
-sig = r.p_signal[:, r.sig_name.index("MLII")]   # choose the MLII lead
-ann = wfdb.rdann(..., "atr")                    # read the cardiologist labels
-```
+## 5. The model
 
-For each labelled beat:
-
-1. Take **504 samples** (1.4 s) centred on the R peak. The window is wide enough to include parts of the neighbouring beats.
-2. **Z-score normalise** the window (subtract its mean, divide by its standard deviation). This removes differences in signal strength and baseline between recordings, so the model focuses on *shape*.
-3. Store the window (`X`), its 4 RR features (`R`), its class (`y`) and its position (`pos`, used by the demo).
-
-Beats too close to the start or end of a recording to fit a full window are skipped. The lead is looked up by name instead of assumed to be channel 0, because record 114 has its leads swapped.
-
-**Result:** 100,640 beats: 90,052 N, 2,780 S, 7,006 V and 802 F.
-
-### 4.4 The model ([ecg.py:67-77](ecg.py:67))
+[`ecgcnn/model.py:10`](ecgcnn/model.py:10)
 
 ```
-input: 504-sample window
-  → Conv1d(1→32, kernel 7) → BatchNorm → ReLU → MaxPool(2)     # 252 long
-  → Conv1d(32→64)  → BatchNorm → ReLU → MaxPool(2)             # 126
-  → Conv1d(64→128) → BatchNorm → ReLU → MaxPool(2)             # 63
-  → Conv1d(128→128)→ BatchNorm → ReLU → MaxPool(2)             # 31
-  → global average pool → 128 numbers describing the beat's shape
-  → [append 4 RR features]   (only in the "+RR" models)
-  → Dropout(0.3) → Linear → 4 class scores
+504-sample window
+ → 4 × [Conv1d(kernel 7) → BatchNorm → ReLU → MaxPool(2)]   channels 32, 64, 128, 128
+ → global average pool → 128 shape features
+ → (+ 4 RR features in the CNN+RR models)
+ → Dropout(0.3) → Linear → 4 class scores → softmax = model probabilities
 ```
 
-What each part does:
+About 190k parameters. The softmax outputs are model probabilities, **not** calibrated confidence.
 
-- **1D convolution:** a small filter (7 samples ≈ 20 ms) slides along the signal looking for local patterns such as a sharp rise or a wide dip. Early layers learn simple edges; deeper layers combine them into whole-beat features ("wide QRS", "inverted T").
-- **BatchNorm:** keeps the values in a stable range, so training is faster and more reliable.
-- **MaxPool:** halves the length each time, so deeper layers see a wider stretch of the beat.
-- **Global average pool:** squashes the result into one fixed-length summary of the beat.
-- **Dropout:** randomly switches off 30% of the features during training so the model can't depend too much on any single one.
+### Checkpoints
 
-About 190,000 trainable parameters, which is small by deep-learning standards. All 8 models train in about 4.5 minutes in total on one consumer GPU.
+[`model.py:27-57`](ecgcnn/model.py:27)
 
-In the CNN-only models, `rr` has zero columns, so one class serves both versions.
+New checkpoints store the weights **and** their metadata: architecture, number of RR inputs, class order, preprocessing settings, split, train/validation/test records, seed, best epoch, class weights, the validation-selected alarm threshold and software versions. `load_checkpoint()` builds the model from that metadata, never from the filename.
 
-### 4.5 Training and evaluation ([ecg.py:80-113](ecg.py:80))
+The v1 checkpoints are bare weight files. They load only with an **explicit** `legacy=True` (`--legacy` on the command line), which attaches the known v1 metadata: trained on all of DS1, seed 0, no threshold. Their RR input size is read from the weight shapes.
 
-- **Loss:** cross-entropy, the standard loss for classification.
-- **Class weights** (line 85): with `weighted=True`, each class's loss is scaled by the inverse of how common it is. In DS1 the weights come out as N 0.28, S 13.5, V 3.4, F 30.8, so missing one fusion beat costs about 110× more than missing one normal beat. Without this, the model learns that "always say normal" is nearly always right.
-- **Optimiser:** Adam, learning rate 0.001, batches of 256 beats, **15 epochs** (passes over the training data).
-- **No early stopping** (line 89): the number of epochs is fixed in advance. Early stopping would mean checking the test patients during training to decide when to stop, which quietly leaks test information into the model.
-- **Saving** (lines 100-101): only models trained on the patient split are saved, because those are the only ones that are honest to demo on a test patient.
+---
 
-Metrics recorded per experiment:
+## 6. Training and selection
 
-| Metric | Question it answers |
+[`ecgcnn/train.py`](ecgcnn/train.py)
+
+- Adam, learning rate 1e-3, batch 256, up to **40 epochs**.
+- **Class weights** (weighted configurations): inverse class frequency on the *training* partition, in sklearn's `balanced` style. Missing a rare beat costs more.
+- **Early stopping on validation:** after each epoch, compute validation macro-F1. Keep the best checkpoint, and stop after 6 epochs without improvement.
+  - Early stopping on **validation** data is the standard, valid way to choose a checkpoint.
+  - Early stopping on **test** data would be leakage, because the test set would then shape the model.
+- **Seeds:** each configuration is trained with seeds 0, 1 and 2. Seeds fix the initial weights and the order of training batches. CUDA is set to deterministic mode where PyTorch allows it, but a few GPU operations remain nondeterministic.
+- **Alarm threshold** ([metrics.py:65](ecgcnn/metrics.py:65)): an alarm is raised when *p_abnormal = 1 − p(N)* ≥ *t*. *t* is chosen on **validation** data to maximise alarm F1. The alarm is a separate decision from the 4-class argmax.
+- **Demo model:** the configuration with the highest mean validation macro-F1, then that configuration's best validation seed.
+
+`run_experiments.py` trains each model once and evaluates it on both the strict and the conventional test sets. It refuses to overwrite an existing run directory, and it writes `config.json` (records, seeds, hyperparameters, versions) before training starts.
+
+---
+
+## 7. Metrics
+
+[`ecgcnn/metrics.py`](ecgcnn/metrics.py)
+
+Everything is computed from confusion matrices (rows = reference, columns = prediction):
+
+| Metric | Question |
 |---|---|
-| Recall per class | Of the real V beats, what fraction were labelled V? |
-| Precision per class | Of the beats labelled V, what fraction really were V? |
-| **Flagged** (`abnormal_flag_recall`) | Of all abnormal beats, what fraction were called *anything other than normal*? This is the screening question: "did it raise the alarm?" |
-| **False alarms** (`normal_false_alarm`) | Of the normal beats, what fraction were wrongly flagged? |
-| Confusion matrix | The full table of true class against predicted class |
+| Accuracy | fraction of all beats with the right class (dominated by the N group) |
+| Recall per class | of the real X beats, how many were called X? |
+| Precision per class | of the beats called X, how many really were X? |
+| F1 per class | 2TP / (2TP + FP + FN) |
+| Macro F1, balanced accuracy | unweighted means over the 4 classes (balanced accuracy = mean recall) |
+| Flag recall | of the S/V/F beats, how many were called non-N? |
+| Flag precision | of the beats called non-N, how many really were S/V/F? |
+| N-group false-positive rate | of the N-group beats, how many were called non-N? |
+| Raw and row-normalised confusion matrices, per-patient results | in `metrics.json` and `summary.md` |
 
-### 4.6 The experiments ([ecg.py:116-134](ecg.py:116))
+**Undefined is not zero.** If a class is absent, or never predicted, its recall or precision is stored as `None` together with the reason. For example, when a seed never predicts F, its F precision shows as "n/a".
 
-`main()` runs **2 × 2 × 2 = 8** experiments:
+### Two kinds of uncertainty
 
-| Choice | Option A | Option B |
-|---|---|---|
-| **Split** | Random beats (70/30). Leaky: the same patients are in train and test | **By patient** (DS1 → DS2). The honest one |
-| **Loss** | Plain | Class-weighted |
-| **Inputs** | CNN only (shape) | CNN + RR features (shape + timing) |
-
-The random beat split is there **on purpose as a contrast**, to show how much it inflates the score.
-
-### 4.7 Plots ([ecg.py:137](ecg.py:137))
-
-`plot()` saves `recall.png` (recall per class for the 4 patient-split models) and `confusion_patient_split.png` (plain CNN next to CNN+RR). It reads only `metrics.json`, so the charts can be redrawn without retraining.
+- **Across seeds:** mean ± sample standard deviation over seeds 0-2, which measures training randomness.
+- **Across patients:** a **patient-cluster bootstrap** ([metrics.py:87](ecgcnn/metrics.py:87)). Resample the 21 test *subjects* with replacement 2,000 times, recompute the seed-averaged metric each time and report the 2.5th-97.5th percentile. Beats from the same person are not independent, so beats are never resampled individually. If a metric is undefined in some resamples (for example no F beats drawn), the table says how many.
 
 ---
 
-## 5. `demo.py`: the video
+## 8. Results (strict split, 3 seeds)
 
-`python demo.py 200` produces `results/demo_record_200.mp4`.
+Per-class recall, mean ± sd over seeds, with the 95% patient CI in brackets:
 
-1. **Check the patient is unseen** (line 22): the record must be in DS2, so the video never shows a patient the model trained on.
-2. **Run the model on the whole 30-minute recording** in one go (lines 28-33). The CNN+RR plain model is the default because it had the best trade-off: 82% of abnormal beats flagged with 11.5% false alarms.
-3. **Choose the 20 seconds with the most abnormal beats** (lines 36-38). That's deliberate selection for the clip, so the closing card shows the **whole-recording numbers** to keep it honest.
-4. **Decide when each beat's label appears** (lines 40-41): only once the model would really have all its input, meaning the full window has been recorded *and* the next beat has arrived (the post-RR feature needs it). The video doesn't show the model "seeing the future".
-5. **Draw each frame** (`draw`, line 62), 30 per second:
-   - frames 0-3 s: intro card
-   - frames 3-23 s: the ECG trace scrolling like a hospital monitor. Each beat shows the model's call above it (coloured box) and the cardiologist's label below it, with ✓ or ✗. A side panel keeps a running count of abnormal beats caught.
-   - frames 23-28 s: results for the whole recording
-6. **Encode** with ffmpeg as H.264, `yuv420p` (line 112), the format LinkedIn and phones play reliably.
+| Config | N group | S | V | F |
+|---|---|---|---|---|
+| CNN, plain | 87.9 ± 5.4 [79.9, 94.5] | 0.4 ± 0.2 [0.3, 1.7] | 90.4 ± 3.0 [80.1, 95.6] | 6.1 ± 10.6 [0.0, 7.7] |
+| CNN, weighted | 82.4 ± 11.0 [75.6, 89.1] | 3.2 ± 1.8 [0.8, 16.0] | 83.5 ± 3.7 [68.0, 92.7] | 17.9 ± 26.2 [0.0, 18.8] |
+| CNN+RR, plain | 86.0 ± 6.0 [77.2, 93.2] | 2.2 ± 1.5 [0.5, 10.7] | 92.2 ± 2.6 [82.7, 96.6] | 0.4 ± 0.7 [0.0, 0.5] |
+| CNN+RR, weighted | 87.1 ± 3.7 [80.9, 93.1] | 3.4 ± 1.3 [0.6, 16.3] | 85.7 ± 6.4 [71.6, 93.5] | 12.1 ± 20.4 [0.0, 12.9] |
 
----
+### What this shows
 
-## 6. Results
+1. **Class weighting did not reliably improve rare-class recall here.**
+   - S recall averages below 4% in every configuration; the best single run reaches 4.4%.
+   - F recall rises on average, but that average is driven by one seed per configuration (seed 1: 48% CNN/weighted, 36% CNN+RR/weighted). The other seeds are below 6%.
+   - V recall drops by about 7 points with weighting.
+   - Macro F1 and balanced accuracy differ by less than the seed-to-seed spread.
+2. **This differs from v1**, which reported V recall rising from 54% to 91% with weighting. v1 used one seed, a fixed 15 epochs and all 22 DS1 recordings for training. Here, checkpoints are chosen on validation macro-F1 and 6 recordings are held out for validation. Either change could explain the difference; neither was tested on its own.
+3. **RR features show no consistent advantage** across seeds.
+4. **Patient intervals are wide.** For example, flag recall for CNN+RR/weighted is 58.9% with a CI of [31.8, 85.4]. A few recordings hold most of the abnormal beats: record 232 has 1,382 of the 1,782 S test beats, and record 213 has 362 of the 387 F beats.
 
-### Unseen patients
-
-| Model | Loss | Accuracy | N | S | V | F | Flagged | False alarms |
-|---|---|---|---|---|---|---|---|---|
-| CNN | plain | 92.2% | 99.6% | 0.0% | 54.1% | 3.1% | 35.3% | 0.4% |
-| CNN | weighted | 80.0% | 83.0% | 4.1% | **91.3%** | 1.3% | **81.0%** | 17.0% |
-| CNN + RR | plain | 85.0% | 88.5% | 1.4% | **95.0%** | 0.5% | **81.8%** | **11.5%** |
-| CNN + RR | weighted | 70.1% | 71.2% | 16.3% | 90.5% | 30.2% | 70.2% | 28.8% |
-
-### What to take from it
-
-1. **The model with the highest accuracy is the worst one.** The plain CNN scores 92% accuracy and misses almost half the ventricular beats and every supraventricular one. This is the imbalance trap the project was designed to expose.
-2. **Class weighting works.** Ventricular recall goes from **54% to 91%**, and the share of abnormal beats flagged goes from **35% to 81%**. The cost is more false alarms (0.4% to 17%), and that is the trade-off a real system has to choose.
-3. **Adding timing information reduces false alarms.** CNN+RR flags the same share of abnormal beats with fewer false alarms (11.5% against 17%).
-4. **The random beat split overstates performance.** Supraventricular recall is 82-97% when patients overlap between train and test, and 0-16% when they don't. The model is recognising *people*, not *beat types*.
-5. **Supraventricular beats remain unsolved.** Four fixes were tried, all compared on held-out *training* patients so the test set wasn't used to choose: RR features in the final layer, a separate RR branch, a smaller CNN with fewer epochs, and averaging with an RR-only model. None got above about 30%. The causes are a small amount of training data (about 940 supraventricular beats from a few patients) and one test patient (record 232) holding 75% of all supraventricular test beats.
-
-### Honest caveats
-
-- Each configuration was trained **once with one seed**. GPU training isn't bit-for-bit reproducible, so numbers move by a few points between runs.
-- The RR features divide by the **whole recording's** average RR. A live monitor would have to use a running average built up over the first minutes.
-- This is a portfolio project, **not a medical device**.
+The validation-selected model is **CNN+RR, weighted, seed 1**, with threshold 0.56. On the strict test set:
+- **Alarm recall** 63.9% (3,429 / 5,369)
+- **Alarm precision** 37.7% (3,429 / 9,097)
+- **N-group false alarms** 13.4% (5,668 / 42,163)
+- **Exact-class recall** S 4.4%, V 80.8%, F 35.7%
 
 ---
 
-## 7. How to reproduce
+## 9. Demo video
+
+[`demo.py`](demo.py)
+
+1. **Load the checkpoint** from its metadata, and refuse any record whose **subject** is in the checkpoint's training or validation records ([inference.py:16](ecgcnn/inference.py:16)). It also checks that ffmpeg exists, that the input files exist, and it won't overwrite an existing video without `--force`.
+2. **Run the model** on the whole recording in batches.
+3. **Pick the 20 s segment** with the most annotated abnormal beats. The video **says so on screen**, and it ends with whole-recording results.
+4. **Draw each beat:**
+   - top: the predicted class, outlined white when an alarm is raised
+   - middle: the reference class
+   - bottom: the status: ✓, *flagged, wrong class*, **MISSED** or **FALSE ALARM**
+   The side panel counts exact-class correctness and alarm outcomes separately.
+5. **Show each label only once the model's inputs exist:** the window end and the next R peak. This is presentation only; see §4.2.
+
+The title comes from the loaded model, for example "CNN + RR, class-weighted (seed 1)". The v1 video is kept in `historical/v1/results/`.
+
+---
+
+## 10. Interactive explorer
+
+[`explorer.py`](explorer.py) is a Streamlit app (`streamlit run explorer.py`).
+
+- **Sidebar:** pick a checkpoint (new, or v1 through the legacy loader) and a recording from the eligible list.
+- **Threshold slider** on p_abnormal. The validation-selected value is the default, and any other value shows an *exploratory* warning.
+- **Whole-record panel:** an exact-class table (undefined cells left empty) and alarm results at the current threshold, plus the validated threshold for comparison and a recall/precision-vs-threshold curve.
+- **Beat panel:**
+  - Filters for all beats, correct, argmax wrong, alarmed-but-wrong-class, missed abnormal and false alarms.
+  - Jump-to-time control and stepping through beats.
+  - ±3 s context and the 504-sample model input.
+  - Reference, prediction and alarm for the selected beat, with its model probabilities.
+  - RR intervals in seconds and as ratios.
+- **Caching:** records, models and probabilities are cached, so moving the slider doesn't rerun the model.
+
+---
+
+## 11. Limitations
+
+- Expert-annotated beat locations only: no detector, no live operation.
+- RR features look ahead (the next beat and the whole-recording mean).
+- The validation partition is small and fixed. There is no cross-validation, and the F class is tiny there (30 beats).
+- Test classes are concentrated in a few people (S → 232, F → 213).
+- DS2 is not untouched (see §3).
+- The N group is broader than "normal sinus".
+- Research only, not a medical device.
+
+### Optional extensions (not implemented)
+
+- **Patient-specific baseline:** compare each beat with templates built from the same patient's earlier, unlabelled beats.
+- **Noise robustness:** use the PhysioNet NST noise tracks. The prepared NST records are built from training records 118 and 119, so they can't serve as unseen-patient tests.
+- **Automatic beat detection:** a detected-peak mode, scored by missed and extra beats.
+
+---
+
+## 12. Reproduce
 
 ```bash
-python -m venv .venv
-.venv/Scripts/pip install torch --index-url https://download.pytorch.org/whl/cu126
-.venv/Scripts/pip install -r requirements.txt
-# download https://physionet.org/content/mitdb/1.0.0/ → unzip to data/mitdb
-.venv/Scripts/python ecg.py          # trains all 8 models, writes results/
-.venv/Scripts/python demo.py 200     # renders the video (needs ffmpeg on PATH)
+.venv/Scripts/python -m pytest                          # 15 tests
+.venv/Scripts/python run_experiments.py --out runs/new  # 4 configs × 3 seeds, ~5 min on RTX 3060 Ti
+.venv/Scripts/python summarize.py runs/new
+.venv/Scripts/python demo.py --checkpoint runs/new/checkpoints/<model>.pt --record 200
+.venv/Scripts/streamlit run explorer.py --browser.gatherUsageStats false
 ```
 
----
-
-## 8. Glossary
+## 13. Glossary
 
 | Term | Meaning |
 |---|---|
-| **R peak** | The tallest spike of a heartbeat; used as the beat's position |
-| **RR interval** | Time between two consecutive R peaks |
-| **Lead (MLII)** | One view of the heart's electrical activity, from a particular electrode placement |
-| **Recall** | Of the real positives, the fraction found. "Did we catch them?" |
-| **Precision** | Of the predicted positives, the fraction correct. "Were the alarms real?" |
-| **Class weights** | Making mistakes on rare classes cost more during training |
-| **Inter-patient split** | Train and test sets contain different people |
-| **Confusion matrix** | Table of true class (rows) against predicted class (columns) |
-| **1D CNN** | A neural network that slides learned filters along a 1-dimensional signal |
-| **Epoch** | One full pass over the training data |
+| R peak / RR interval | the beat's main spike / time between consecutive spikes |
+| AAMI N group | N plus L, R, e, j beat labels; broader than normal sinus rhythm |
+| Recall / precision | "did we find them?" / "were our calls right?" |
+| Flag | any S/V/F beat predicted as a non-N class |
+| Alarm | p_abnormal = 1 − p(N) ≥ threshold, a separate decision from argmax |
+| Subject-disjoint | no person appears in more than one partition |
+| Patient-cluster bootstrap | resampling whole patients to estimate uncertainty |
+| Early stopping | keep the epoch with the best **validation** score |
