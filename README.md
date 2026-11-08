@@ -108,7 +108,7 @@ Checkpoints load without retraining, and records and inference results are cache
 - Exact-class correctness and alarm correctness are counted separately.
 - The closing card gives whole-recording results. On record 200 the model caught 825 of 857 abnormal beats but raised false alarms on 412 of 1,742 N-group beats (23.7%).
 
-Videos (both also attached to the [GitHub release](../../releases) for direct download):
+Videos (both also attached to the [GitHub release](https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0) for direct download):
 - [runs/strict_2026-11-08/demo_record_200.mp4](runs/strict_2026-11-08/demo_record_200.mp4): current version (validation-selected model, strict split)
 - [historical/v1/results/demo_record_200.mp4](historical/v1/results/demo_record_200.mp4): v1 version, kept for reference (see [historical/v1](historical/v1/README.md) for its caveats)
 
