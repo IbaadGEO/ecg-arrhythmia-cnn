@@ -14,7 +14,7 @@
 
 ## About
 
-This project is part of a self-directed learning initiative across different fields, including coding, data, machine learning and geoscience projects. It is not a professional or commissioned study, and it is not a medical device. It uses only published, citable public data: the MIT-BIH Arrhythmia Database and its reference annotations. All results come from code and outputs in this repository, and the first version is kept with its errors documented in [historical/v1](historical/v1/README.md).
+This project is part of a self-directed learning initiative covering coding, data, machine learning and geoscience. It is not a professional or commissioned study, and it is not a medical device. It uses only published, citable public data: the MIT-BIH Arrhythmia Database and its reference annotations. All results come from code and outputs in this repository, and the first version is kept with its errors documented in [historical/v1](historical/v1/README.md).
 
 ## Heartbeats, arrhythmias and the question
 
@@ -22,7 +22,7 @@ Each heartbeat on an electrocardiogram (ECG) produces a sharp QRS complex whose 
 
 About 9 in 10 beats are in the N group, so a model that always answers N scores about 90% accuracy and finds nothing. de Chazal, O'Dwyer and Reilly (2004) split the 44 non-paced recordings into two sets of 22 (DS1 and DS2) so that classifiers are tested on recordings they never trained on. Their statistical classifier reached 75.9% sensitivity and 38.5% positive predictivity for S beats. Records 201 and 202 come from the same subject, so for subject-independent evaluation they belong in the same partition (Moody and Mark, 2005). The conventional DS1/DS2 split puts them on opposite sides.
 
-**The question this project tests:** does class-weighted cross-entropy raise per-class recall on the rare S, V and F beats, compared with plain cross-entropy, for people the model was not trained on?
+This project asks one question. Does class-weighted cross-entropy raise per-class recall on the rare S, V and F beats, compared with plain cross-entropy, for people the model was not trained on?
 
 ```mermaid
 flowchart LR
@@ -39,11 +39,11 @@ The pipeline classifies beats at the annotated positions. It does not detect bea
 
 <img src="docs/media/app.jpg" alt="The full explorer app: sidebar with checkpoint, recording and alarm threshold; whole-record results tables and a recall/precision-vs-threshold chart; beat filters; the selected beat's context, model input window, probabilities and RR intervals">
 
-- **Trains and compares four configurations** (CNN or CNN + RR features, with plain or class-weighted loss), each with seeds 0, 1 and 2, on 16 training recordings. Early stopping, model choice and the alarm threshold use 6 validation recordings.
-- **Tests on 21 recordings (47,532 beats)** whose subjects never appear in training or validation. An explicit record-to-subject map enforces this, and a unit test covers it.
-- **Reports each class separately, with counts.** That covers recall, precision and F1 per class, macro F1, balanced accuracy, abnormal-flag recall and precision, the N-group false-alarm rate and results per test patient.
-- **Separates two kinds of uncertainty:** the spread across seeds, and 95% confidence intervals from resampling test patients, 2,000 times.
-- **Explorer app:** opens any of the 16 saved checkpoints (12 from the current run, 4 from v1) on any recording its model never saw. You can step through beats, filter by outcome, and see each beat's probabilities and RR intervals. On record 200 the selected model raises 412 false alarms and misses 32 abnormal beats; the filters list each one.
+- It trains four configurations (CNN or CNN + RR features, with plain or class-weighted loss), each with seeds 0, 1 and 2, on 16 training recordings. Early stopping, model choice and the alarm threshold use 6 validation recordings.
+- It tests on 21 recordings (47,532 beats) whose subjects never appear in training or validation. An explicit record-to-subject map enforces this, and a unit test covers it.
+- It reports each class separately, with counts: recall, precision and F1 per class, macro F1, balanced accuracy, abnormal-flag recall and precision, the N-group false-alarm rate and results per test patient.
+- Uncertainty is reported two ways: the spread across seeds, and 95% confidence intervals from resampling test patients 2,000 times.
+- The explorer app opens any of the 16 saved checkpoints (12 from the current run, 4 from v1) on any recording its model never saw. You can step through beats, filter by outcome, and see each beat's probabilities and RR intervals. On record 200 the selected model raises 412 false alarms and misses 32 abnormal beats, and the filters list each one.
 
 ### The alarm threshold, explored on one recording
 
@@ -53,7 +53,7 @@ Record 200, threshold swept from 0.30 to 0.90. The alarm fires when *1 − p(N)*
 
 ## Results
 
-Strict split, 21 test recordings, 3 seeds. Values are **mean ± sd across seeds**, then the **95% patient-cluster bootstrap CI** in brackets. Generated tables with every count are in [runs/strict_2026-11-08/summary.md](runs/strict_2026-11-08/summary.md).
+Strict split, 21 test recordings, 3 seeds. Values are mean ± sd across seeds, then the 95% patient-cluster bootstrap CI in brackets. Generated tables with every count are in [runs/strict_2026-11-08/summary.md](runs/strict_2026-11-08/summary.md).
 
 | Config | N group | S | V | F |
 |---|---|---|---|---|
@@ -64,7 +64,7 @@ Strict split, 21 test recordings, 3 seeds. Values are **mean ± sd across seeds*
 
 <sub>Per-class recall (%), 4-class argmax.</sub>
 
-**Answer: class weighting did not reliably improve rare-class recall under this protocol.** S recall stayed below 4% on average in every configuration. F recall rose on average, but 9 of the 12 runs scored 5.4% or less and the mean is driven by seed 1. V recall fell by about 7 points with weighting. RR features showed no consistent advantage either.
+Class weighting did not reliably improve rare-class recall under this protocol. S recall stayed below 4% on average in every configuration. F recall rose on average, but 9 of the 12 runs scored 5.4% or less and the mean is driven by seed 1. V recall fell by about 7 points with weighting. RR features showed no consistent advantage either.
 
 The validation-selected model (CNN + RR, class-weighted, seed 1, threshold 0.56) alarmed on 3,429 of 5,369 abnormal test beats (63.9%). 3,429 of its 9,097 alarms were real (37.7%), and 5,668 of 42,163 N-group beats raised false alarms (13.4%).
 
@@ -75,7 +75,7 @@ Both demo excerpts show the same stretch of record 200 (966–974 s).
 <table>
 <tr>
 <td width="50%"><img src="docs/media/demo_v1.webp" alt="v1 demo excerpt: predicted class above each beat, cardiologist label below with a tick or cross"><br><b>v1 demo.</b> CNN + RR, plain loss, trained on all 22 DS1 recordings with one seed and no validation set. Over the whole of record 200 it flags 816 of 857 abnormal beats and 162 of 1,742 N-group beats (9.3%). It does not label false alarms on screen.</td>
-<td width="50%"><img src="docs/media/demo_v2.webp" alt="v2 demo excerpt: each beat labelled correct, false alarm or missed, with running counts"><br><b>v2 demo.</b> The validation-selected model at threshold 0.56. Over the whole recording it alarms on 825 of 857 abnormal beats and on 412 of 1,742 N-group beats (23.7%). Every false alarm and miss is labelled. One recording does not compare the two protocols.</td>
+<td width="50%"><img src="docs/media/demo_v2.webp" alt="v2 demo excerpt: each beat labelled correct, false alarm or missed, with running counts"><br><b>v2 demo.</b> The validation-selected model at threshold 0.56. Over the whole recording it alarms on 825 of 857 abnormal beats and on 412 of 1,742 N-group beats (23.7%). Every false alarm and miss is labelled. A single recording is not enough to compare the two protocols.</td>
 </tr>
 <tr>
 <td><img src="docs/media/recall_v1.png" alt="v1 per-class recall bar chart for beat-split and patient-split models"><br><b>v1 recall.</b> One seed. The patient split is the conventional DS1/DS2, which shares subject 201/202; the beat split mixes beats from the same patients and overlapping windows.</td>
@@ -97,19 +97,19 @@ Every ECG trace and reference label shown in this repository comes from the MIT-
 | Beat positions and beat labels | Reported (automatic labels, reviewed by two cardiologists) | Moody and Mark (2005) |
 | Records 201 and 202 from the same subject | Reported | Moody and Mark (2005) |
 | N, S, V, F grouping of the labels | Standard, applied by this project | AAMI (2012) |
-| Beat windows and RR-interval features | **Derived** by this project | `ecgcnn/data.py` |
-| Model probabilities, predictions and alarms | **Model output** | this project |
-| Recall, precision, F1, flag metrics, per-patient results | **Computed** against the reference labels | this project |
-| Confidence intervals | **Estimated** (patient-cluster bootstrap) | this project |
-| Alarm threshold 0.56 and the selected model | **Chosen** on validation recordings | this project |
+| Beat windows and RR-interval features | Derived by this project | `ecgcnn/data.py` |
+| Model probabilities, predictions and alarms | Model output | this project |
+| Recall, precision, F1, flag metrics, per-patient results | Computed against the reference labels | this project |
+| Confidence intervals | Estimated (patient-cluster bootstrap) | this project |
+| Alarm threshold 0.56 and the selected model | Chosen on validation recordings | this project |
 
 ## Built with
 
-- **Model and training:** Python 3.13, PyTorch 2.14 (CUDA 12.6), NumPy, scikit-learn for class weights.
-- **Data access:** wfdb 4.3.1 to read the PhysioNet records and annotations.
-- **Evaluation and plots:** custom confusion-matrix metrics and patient bootstrap, matplotlib.
-- **Explorer and video:** Streamlit 1.67, matplotlib with ffmpeg; README media recorded with Playwright (headless Chromium) and assembled with Pillow and ffmpeg.
-- **Tests:** pytest, 15 tests covering subject separation, label mapping, RR features, metrics and checkpoint loading.
+- Model and training: Python 3.13, PyTorch 2.14 (CUDA 12.6), NumPy, and scikit-learn for class weights.
+- Data access: wfdb 4.3.1 reads the PhysioNet records and annotations.
+- Evaluation and plots: the project's own confusion-matrix metrics and patient bootstrap, and matplotlib.
+- Explorer and video: Streamlit 1.67 and matplotlib with ffmpeg. The README media were recorded with Playwright (headless Chromium) and assembled with Pillow and ffmpeg.
+- Tests: 15 pytest tests covering subject separation, label mapping, RR features, metrics and checkpoint loading.
 
 Full walkthrough of the code and protocol: [WALKTHROUGH.md](WALKTHROUGH.md) · v1 baseline and its corrections: [historical/v1/README.md](historical/v1/README.md) · Terms per file: [DATA-LICENCES.md](DATA-LICENCES.md)
 
