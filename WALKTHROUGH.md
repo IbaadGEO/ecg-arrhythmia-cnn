@@ -31,7 +31,7 @@ A model can flag an S beat by calling it V. That counts as flagged, but the clas
 ## 2. The data
 
 - **MIT-BIH Arrhythmia Database:** 48 half-hour two-lead recordings at 360 Hz, from **47 people**. Records **201 and 202 come from the same person**; the `202.hea` header says it was "taken from the same analog tape as record 201".
-- Every beat was labelled by two or more cardiologists (`.atr` files).
+- Initial beat labels were generated automatically. Two cardiologists then independently reviewed each recording and corrected the beat positions and classes (`.atr` files; Moody and Mark, 2005).
 - The **MLII** lead is used. It is looked up by name, because record 114 stores it on the second channel.
 - The 4 paced recordings (102, 104, 107, 217) are excluded by AAMI convention.
 

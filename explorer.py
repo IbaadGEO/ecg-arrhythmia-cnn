@@ -3,6 +3,7 @@
 Loads saved checkpoints (no training), runs them on a recording whose subject the model never saw, and lets you
 step through beats, inspect probabilities and RR intervals, and explore the abnormal-alarm threshold.
 """
+import json
 from pathlib import Path
 
 import matplotlib
@@ -40,10 +41,13 @@ def get_probs(path, legacy, data_dir, rec):
     return predict_proba(model, d["X"], d["R"])
 
 
+@st.cache_data
 def checkpoints():
+    """Validation-selected checkpoint of each run first, so the app opens on it."""
+    selected = {m.parent / json.loads(m.read_text())["selected_model"]["checkpoint"] for m in ROOT.glob("runs/*/metrics.json")}
     found = {}
-    for p in sorted(ROOT.glob("runs/*/checkpoints/*.pt")):
-        found[f"{p.parent.parent.name} / {p.stem}"] = (str(p), False)
+    for p in sorted(ROOT.glob("runs/*/checkpoints/*.pt"), key=lambda p: (p not in selected, str(p))):
+        found[f"{p.parent.parent.name} / {p.stem}" + (" (validation-selected)" if p in selected else "")] = (str(p), False)
     for p in sorted(ROOT.glob("historical/v1/results/*.pt")):
         found[f"historical v1 (legacy) / {p.stem}"] = (str(p), True)
     return found
@@ -54,7 +58,7 @@ st.caption("MIT-BIH Arrhythmia Database · offline classification at expert-anno
            "research demo, not a medical device")
 
 with st.sidebar:
-    data_dir = st.text_input("MIT-BIH folder", str(ROOT / "data" / "mitdb"))
+    data_dir = str(ROOT / st.text_input("MIT-BIH folder (relative to the project, or absolute)", "data/mitdb"))
     cks = checkpoints()
     if not cks:
         st.error("No checkpoints found under runs/*/checkpoints or historical/v1/results."); st.stop()
