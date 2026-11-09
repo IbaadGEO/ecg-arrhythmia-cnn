@@ -26,10 +26,11 @@ About 9 in 10 beats are in the N group, so a model that always answers N scores 
 
 ```mermaid
 flowchart LR
-  A["<b>ECG recording</b><br/>MLII lead, 360 Hz"] --> B["<b>Annotated beat</b><br/>R-peak position<br/>from the reference labels"]
-  B --> C["<b>Model input</b><br/>504-sample window<br/>+ 4 RR-interval ratios"]
-  C --> D["<b>1D CNN</b><br/>about 190k parameters"]
-  D --> E["<b>Output</b><br/>class = argmax p(N,S,V,F)<br/>alarm if 1 − p(N) ≥ t"]
+  A["<b>ECG</b><br/>MLII, 360 Hz"] --> B["<b>Beat</b><br/>annotated<br/>R peak"]
+  B --> C["<b>Input</b><br/>504 samples<br/>+ 4 RR ratios"]
+  C --> D["<b>1D CNN</b><br/>~190k params"]
+  D --> E["<b>Class</b><br/>argmax of<br/>p(N,S,V,F)"]
+  E --> F["<b>Alarm</b><br/>1 − p(N) ≥ t"]
 ```
 
 The pipeline classifies beats at the annotated positions. It does not detect beats itself and it does not run live: the RR features use the next beat and the whole recording's mean RR interval.
