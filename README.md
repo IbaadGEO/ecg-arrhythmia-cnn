@@ -1,41 +1,58 @@
-# ECG Arrhythmia Classification with a 1D CNN
+<div align="center">
 
-A 1D convolutional network classifies heartbeats from the raw [MIT-BIH Arrhythmia Database](https://physionet.org/content/mitdb/1.0.0/) into the AAMI groups **N** (N group), **S** (supraventricular), **V** (ventricular) and **F** (fusion). The project's central question:
+# ECG Arrhythmia CNN
 
-> **Does class-weighted cross-entropy raise per-class recall on the rare abnormal beats, compared with plain cross-entropy, when the model is tested on people it was not trained on?**
+**A 1D CNN that classifies heartbeats from the MIT-BIH Arrhythmia Database into the AAMI N, S, V and F groups, tested on people it was not trained on**
 
-About 9 in 10 beats are in the N group, so accuracy says little. Every result is reported per class, with counts.
+[![Demo videos](https://img.shields.io/badge/demo-videos-1971c2?style=flat-square)](https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0) ![Python 3.13](https://img.shields.io/badge/Python-3.13-3776ab?style=flat-square) ![PyTorch 2.14](https://img.shields.io/badge/PyTorch-2.14-ee4c2c?style=flat-square) ![Streamlit 1.67](https://img.shields.io/badge/Streamlit-1.67-ff4b4b?style=flat-square) [![Data: MIT-BIH, ODC-By 1.0](https://img.shields.io/badge/data-MIT--BIH_ODC--By_1.0-2f9e44?style=flat-square)](DATA-LICENCES.md) [![Code: MIT](https://img.shields.io/badge/code-MIT-868e96?style=flat-square)](LICENSE) ![Status: research](https://img.shields.io/badge/status-research-868e96?style=flat-square)
 
-**What this is:** offline classification **at expert-annotated beat locations**. The cardiologists' annotations say where each beat is, and the model only decides what kind it is. There is no beat detection and no live monitoring (see [Limitations](#limitations)). Research project, not a medical device.
+<a href="https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0"><img src="docs/media/explorer.webp" width="820" alt="The beat explorer: the alarm threshold slider moves and the whole-record results update, then the beat filters step through false alarms and missed abnormal beats on record 200"></a>
 
-![Demo: the model reading record 200, a person it was not trained on](runs/strict_2026-11-08/demo_preview.gif)
+<sub>The beat explorer on record 200, a person the model never saw. Moving the alarm threshold off its validated value marks the results as exploratory; the filters then step through false alarms and missed beats. Full demo videos are on the release page.</sub>
 
-*Excerpt from the [full demo video](runs/strict_2026-11-08/demo_record_200.mp4) (31 s). Top: the model's predicted class (white outline = alarm raised). Middle: the cardiologists' reference label. Bottom: correct, missed or false alarm. The segment was chosen for its high concentration of abnormal beats; the video ends with whole-recording results.*
+</div>
 
-- Full walkthrough of the task, data, code and results: [WALKTHROUGH.md](WALKTHROUGH.md)
-- Generated tables for the current run: [runs/strict_2026-11-08/summary.md](runs/strict_2026-11-08/summary.md)
-- First version, kept as a labelled historical baseline: [historical/v1/](historical/v1/README.md)
+## About
 
-## Evaluation protocol
+This project is part of a self-directed learning initiative across different fields, including coding, data, machine learning and geoscience projects. It is not a professional or commissioned study, and it is not a medical device. It uses only published, citable public data: the MIT-BIH Arrhythmia Database and its reference annotations. All results come from code and outputs in this repository, and the first version is kept with its errors documented in [historical/v1](historical/v1/README.md).
 
-| | Recordings | Beats (N / S / V / F) | Used for |
-|---|---|---|---|
-| Train | 16 DS1 recordings | 37,553 (33,751 / 742 / 2,676 / 384) | fitting weights |
-| Validation | 6 DS1 recordings: 106, 122, 124, 205, 220, 223 | 13,420 (12,078 / 201 / 1,111 / 30) | early stopping, model choice, alarm threshold |
-| **Strict test** | **21 DS2 recordings** (DS2 without 202) | 47,532 (42,163 / 1,782 / 3,200 / 387) | reporting only |
+## Heartbeats, arrhythmias and the question
 
-- **Subjects, not just recordings.** MIT-BIH has 48 recordings from 47 people: **201 and 202 are the same person.** The conventional de Chazal DS1/DS2 split puts 201 in DS1 and 202 in DS2, so it is not subject-disjoint. The **strict** split drops 202 from the test set: 22 DS1 recordings for development (16 train + 6 validation) and 21 test recordings, with no subject shared between any two partitions. An explicit record → subject map (`ecgcnn/data.py`) enforces this wherever partitions are built, and a unit test covers it.
-- The **conventional** split (full DS2 including 202) is still reported for comparison, with this exception documented.
-- The four paced recordings (102, 104, 107, 217) are excluded by AAMI convention.
-- **Honesty note:** the DS2 test results had already been inspected during the first version of this project (see `historical/v1`). The revised evaluation fixes the split and moves every choice onto validation data, but DS2 is **not** a pristine, never-seen holdout.
+Each heartbeat on an electrocardiogram (ECG) produces a sharp QRS complex whose peak, the R peak, marks the beat's position. The MIT-BIH Arrhythmia Database holds 48 half-hour, two-channel ECG recordings from 47 subjects studied between 1975 and 1979. Initial beat labels were generated automatically, then two cardiologists independently reviewed each recording (Moody and Mark, 2001; Moody and Mark, 2005). The AAMI EC57 standard groups these beat labels into classes, including N, S (supraventricular ectopic), V (ventricular ectopic) and F (fusion) (AAMI, 2012).
 
-Four configurations × seeds 0, 1, 2: **CNN/plain, CNN/weighted, CNN+RR/plain, CNN+RR/weighted.** Each model trains for up to 40 epochs. The checkpoint with the best **validation** macro-F1 is kept (patience 6). The test set is used only after training.
+About 9 in 10 beats are in the N group, so a model that always answers N scores about 90% accuracy and finds nothing. de Chazal, O'Dwyer and Reilly (2004) split the 44 non-paced recordings into two sets of 22 (DS1 and DS2) so that classifiers are tested on recordings they never trained on. Their statistical classifier reached 75.9% sensitivity and 38.5% positive predictivity for S beats. Records 201 and 202 come from the same subject, so for subject-independent evaluation they belong in the same partition (Moody and Mark, 2005). The conventional DS1/DS2 split puts them on opposite sides.
 
-## Results: strict split, 21 test recordings, 3 seeds
+**The question this project tests:** does class-weighted cross-entropy raise per-class recall on the rare S, V and F beats, compared with plain cross-entropy, for people the model was not trained on?
 
-Values are **mean ± sd across seeds** (training randomness), then a **95% patient-cluster bootstrap CI** in brackets (which patients happened to be tested: subjects resampled with replacement, 2,000 times). The two kinds of uncertainty are reported separately. Counts for every seed are in [summary.md](runs/strict_2026-11-08/summary.md).
+```mermaid
+flowchart LR
+  A["<b>ECG recording</b><br/>MLII lead, 360 Hz"] --> B["<b>Annotated beat</b><br/>R-peak position<br/>from the reference labels"]
+  B --> C["<b>Model input</b><br/>504-sample window<br/>+ 4 RR-interval ratios"]
+  C --> D["<b>1D CNN</b><br/>about 190k parameters"]
+  D --> E["<b>Output</b><br/>class = argmax p(N,S,V,F)<br/>alarm if 1 − p(N) ≥ t"]
+```
 
-### Per-class recall (4-class argmax: was the beat's exact class right?)
+The pipeline classifies beats at the annotated positions. It does not detect beats itself and it does not run live: the RR features use the next beat and the whole recording's mean RR interval.
+
+## What the project does
+
+<img src="docs/media/app.jpg" alt="The full explorer app: sidebar with checkpoint, recording and alarm threshold; whole-record results tables and a recall/precision-vs-threshold chart; beat filters; the selected beat's context, model input window, probabilities and RR intervals">
+
+- **Trains and compares four configurations** (CNN or CNN + RR features, with plain or class-weighted loss), each with seeds 0, 1 and 2, on 16 training recordings. Early stopping, model choice and the alarm threshold use 6 validation recordings.
+- **Tests on 21 recordings (47,532 beats)** whose subjects never appear in training or validation. An explicit record-to-subject map enforces this, and a unit test covers it.
+- **Reports each class separately, with counts.** That covers recall, precision and F1 per class, macro F1, balanced accuracy, abnormal-flag recall and precision, the N-group false-alarm rate and results per test patient.
+- **Separates two kinds of uncertainty:** the spread across seeds, and 95% confidence intervals from resampling test patients, 2,000 times.
+- **Explorer app:** opens any of the 16 saved checkpoints (12 from the current run, 4 from v1) on any recording its model never saw. You can step through beats, filter by outcome, and see each beat's probabilities and RR intervals. On record 200 the selected model raises 412 false alarms and misses 32 abnormal beats; the filters list each one.
+
+### The alarm threshold, explored on one recording
+
+<img src="docs/media/threshold.gif" width="760" alt="Whole-record tables and the recall/precision-vs-threshold chart updating as the alarm threshold moves from 0.56 down to 0.30, up to 0.90 and back">
+
+Record 200, threshold swept from 0.30 to 0.90. The alarm fires when *1 − p(N)* reaches the threshold, separately from the 4-class prediction. The validated threshold is 0.56, chosen on the validation recordings; at it, 825 of 857 abnormal beats are alarmed and 412 of 1,742 N-group beats raise false alarms (23.7%). Other values are exploratory because they are chosen while looking at test data.
+
+## Results
+
+Strict split, 21 test recordings, 3 seeds. Values are **mean ± sd across seeds**, then the **95% patient-cluster bootstrap CI** in brackets. Generated tables with every count are in [runs/strict_2026-11-08/summary.md](runs/strict_2026-11-08/summary.md).
 
 | Config | N group | S | V | F |
 |---|---|---|---|---|
@@ -44,138 +61,141 @@ Values are **mean ± sd across seeds** (training randomness), then a **95% patie
 | CNN+RR, plain | 86.0 ± 6.0 [77.2, 93.2] | 2.2 ± 1.5 [0.5, 10.7] | 92.2 ± 2.6 [82.7, 96.6] | 0.4 ± 0.7 [0.0, 0.5] |
 | CNN+RR, weighted | 87.1 ± 3.7 [80.9, 93.1] | 3.4 ± 1.3 [0.6, 16.3] | 85.7 ± 6.4 [71.6, 93.5] | 12.1 ± 20.4 [0.0, 12.9] |
 
-### Summary metrics
+<sub>Per-class recall (%), 4-class argmax.</sub>
 
-*Flag* = an S/V/F beat predicted as any non-N class, regardless of which. Flag recall is "did it raise *some* alarm?", which is a different question from "did it get the class right?".
+**Answer: class weighting did not reliably improve rare-class recall under this protocol.** S recall stayed below 4% on average in every configuration. F recall rose on average, but 9 of the 12 runs scored 5.4% or less and the mean is driven by seed 1. V recall fell by about 7 points with weighting. RR features showed no consistent advantage either.
 
-| Config | Macro F1 | Balanced acc. | Flag recall | Flag precision | N-group false-positive rate |
-|---|---|---|---|---|---|
-| CNN, plain | 38.3 ± 1.0 [31.2, 44.2] | 46.2 ± 0.8 [43.1, 48.2] | 65.2 ± 1.8 [42.9, 88.8] | 42.5 ± 10.7 [23.4, 65.7] | 12.1 ± 5.4 [5.5, 20.1] |
-| CNN, weighted | 38.5 ± 4.1 [33.2, 42.2] | 46.7 ± 4.5 [40.7, 50.9] | 62.2 ± 11.0 [39.8, 84.4] | 34.4 ± 10.4 [20.8, 47.6] | 17.6 ± 11.0 [10.9, 24.4] |
-| CNN+RR, plain | 36.9 ± 3.1 [30.0, 43.0] | 45.2 ± 0.5 [42.5, 48.4] | 71.0 ± 14.0 [53.6, 89.0] | 40.4 ± 5.6 [22.0, 62.8] | 14.0 ± 6.0 [6.8, 22.8] |
-| CNN+RR, weighted | 39.9 ± 2.4 [33.7, 44.6] | 47.1 ± 4.2 [41.9, 51.1] | 58.9 ± 6.2 [31.8, 85.4] | 37.4 ± 5.0 [21.0, 54.4] | 12.9 ± 3.7 [6.9, 19.1] |
+The validation-selected model (CNN + RR, class-weighted, seed 1, threshold 0.56) alarmed on 3,429 of 5,369 abnormal test beats (63.9%). 3,429 of its 9,097 alarms were real (37.7%), and 5,668 of 42,163 N-group beats raised false alarms (13.4%).
 
-![Per-class recall, strict split](runs/strict_2026-11-08/recall_strict.png)
+### First version against the current one
 
-### Answer to the class-weighting question
+Both demo excerpts show the same stretch of record 200 (966–974 s).
 
-**Under this protocol, class weighting did not reliably improve rare-class recall.**
+<table>
+<tr>
+<td width="50%"><img src="docs/media/demo_v1.webp" alt="v1 demo excerpt: predicted class above each beat, cardiologist label below with a tick or cross"><br><b>v1 demo.</b> CNN + RR, plain loss, trained on all 22 DS1 recordings with one seed and no validation set. Over the whole of record 200 it flags 816 of 857 abnormal beats and 162 of 1,742 N-group beats (9.3%). It does not label false alarms on screen.</td>
+<td width="50%"><img src="docs/media/demo_v2.webp" alt="v2 demo excerpt: each beat labelled correct, false alarm or missed, with running counts"><br><b>v2 demo.</b> The validation-selected model at threshold 0.56. Over the whole recording it alarms on 825 of 857 abnormal beats and on 412 of 1,742 N-group beats (23.7%). Every false alarm and miss is labelled. One recording does not compare the two protocols.</td>
+</tr>
+<tr>
+<td><img src="docs/media/recall_v1.png" alt="v1 per-class recall bar chart for beat-split and patient-split models"><br><b>v1 recall.</b> One seed. The patient split is the conventional DS1/DS2, which shares subject 201/202; the beat split mixes beats from the same patients and overlapping windows.</td>
+<td><img src="docs/media/recall_v2.png" alt="v2 per-class recall bar chart, mean and standard deviation over three seeds"><br><b>v2 recall.</b> Strict split, mean ± sd over 3 seeds. The v1 result "weighting raises V recall from 54% to 91%" does not reappear.</td>
+</tr>
+</table>
 
-- **S** recall rose from 0.4% to 3.2% (CNN) and from 2.2% to 3.4% (CNN+RR). That is still near zero in every configuration, and the patient CIs overlap.
-- **F** recall rose on average, but the seed-to-seed spread (±20–26 points) is larger than the change. F recall is at or below 5.4% in 9 of 12 runs. Seed 1 reaches 18% (CNN/plain), 48% (CNN/weighted) and 36% (CNN+RR/weighted), so the mean is driven by single seeds.
-- **V** recall *fell*, from 90.4% to 83.5% (CNN) and from 92.2% to 85.7% (CNN+RR).
-- Macro F1 and balanced accuracy differ by less than the seed spread.
+<sub>ECG and reference labels: MIT-BIH Arrhythmia Database, record 200 (Moody and Mark, 2005), ODC-By 1.0. Excerpts cut from the demo videos and re-encoded as animated WebP at 8 fps.</sub>
 
-This **contradicts the first version** of the project (v1: V recall 54% → 91% with weighting). Two things changed and could explain it, though neither was tested in isolation. First, v1 used one seed and a fixed 15 epochs. Second, here checkpoints are chosen by validation macro-F1, which already favours models that predict the minority classes, even without weights. Training also has 6 fewer recordings, because they now form the validation set.
+## Third-party material
 
-**RR features** (beat-timing ratios) did not show a consistent advantage over CNN-only across seeds either.
+Every ECG trace and reference label shown in this repository comes from the MIT-BIH Arrhythmia Database (Moody and Mark, 2005), under the Open Data Commons Attribution License v1.0. The recordings themselves are not included; you download them from PhysioNet. The README media are screen recordings of this project's explorer, excerpts of its demo videos and its own plots. They were cropped, resized, re-timed and re-encoded as WebP, GIF, JPEG and PNG. No other authors' figures or outputs are reproduced.
 
-### Validation-selected model and alarm threshold
+## Observed, reported or estimated
 
-The selection rule is: the configuration with the highest mean validation macro-F1 (**CNN+RR, weighted**), then its best validation seed (**seed 1**). Its alarm threshold is **0.56**, chosen on validation to maximise alarm F1 for *p_abnormal = 1 − p(N)*.
-
-On the strict test set (47,532 beats):
-
-| | Value | Counts |
+| Part | Status | Source |
 |---|---|---|
-| Exact class recall S / V / F | 4.4% / 80.8% / 35.7% | 78/1,782 · 2,587/3,200 · 138/387 |
-| Alarm recall (p_abnormal ≥ 0.56) | 63.9% | 3,429 / 5,369 |
-| Alarm precision | 37.7% | 3,429 / 9,097 |
-| N-group false alarms | 13.4% | 5,668 / 42,163 |
+| ECG signals, MLII lead, 360 Hz | Observed (recorded 1975–1979) | Moody and Mark (2001, 2005) |
+| Beat positions and beat labels | Reported (automatic labels, reviewed by two cardiologists) | Moody and Mark (2005) |
+| Records 201 and 202 from the same subject | Reported | Moody and Mark (2005) |
+| N, S, V, F grouping of the labels | Standard, applied by this project | AAMI (2012) |
+| Beat windows and RR-interval features | **Derived** by this project | `ecgcnn/data.py` |
+| Model probabilities, predictions and alarms | **Model output** | this project |
+| Recall, precision, F1, flag metrics, per-patient results | **Computed** against the reference labels | this project |
+| Confidence intervals | **Estimated** (patient-cluster bootstrap) | this project |
+| Alarm threshold 0.56 and the selected model | **Chosen** on validation recordings | this project |
 
-These come from one seed and one validation partition. Results per test patient are in [summary.md](runs/strict_2026-11-08/summary.md). Record 232 alone holds 1,382 of the 1,782 S test beats, so S results mostly reflect one person.
+## Built with
 
-## Interactive beat explorer
+- **Model and training:** Python 3.13, PyTorch 2.14 (CUDA 12.6), NumPy, scikit-learn for class weights.
+- **Data access:** wfdb 4.3.1 to read the PhysioNet records and annotations.
+- **Evaluation and plots:** custom confusion-matrix metrics and patient bootstrap, matplotlib.
+- **Explorer and video:** Streamlit 1.67, matplotlib with ffmpeg; README media recorded with Playwright (headless Chromium) and assembled with Pillow and ffmpeg.
+- **Tests:** pytest, 15 tests covering subject separation, label mapping, RR features, metrics and checkpoint loading.
+
+Full walkthrough of the code and protocol: [WALKTHROUGH.md](WALKTHROUGH.md) · v1 baseline and its corrections: [historical/v1/README.md](historical/v1/README.md) · Terms per file: [DATA-LICENCES.md](DATA-LICENCES.md)
+
+## References
+
+**Research papers**
+
+- de Chazal, P., O'Dwyer, M. and Reilly, R.B. (2004) 'Automatic classification of heartbeats using ECG morphology and heartbeat interval features', *IEEE Transactions on Biomedical Engineering*, 51(7), pp. 1196–1206. doi:10.1109/TBME.2004.827359.
+- Kachuee, M., Fazeli, S. and Sarrafzadeh, M. (2018) 'ECG heartbeat classification: a deep transferable representation', *2018 IEEE International Conference on Healthcare Informatics (ICHI)*, pp. 443–444. doi:10.1109/ICHI.2018.00092.
+- Moody, G.B. and Mark, R.G. (2001) 'The impact of the MIT-BIH Arrhythmia Database', *IEEE Engineering in Medicine and Biology Magazine*, 20(3), pp. 45–50. doi:10.1109/51.932724.
+
+**Data and standards**
+
+- AAMI (2012) *ANSI/AAMI EC57:2012 Testing and reporting performance results of cardiac rhythm and ST segment measurement algorithms* (reaffirmed 2020). Arlington, VA: Association for the Advancement of Medical Instrumentation. doi:10.2345/9781570204784.
+- Moody, G. and Mark, R. (2005) *MIT-BIH Arrhythmia Database* (version 1.0.0). PhysioNet. doi:10.13026/C2F305.
+- Pollard, T., Moody, B.E., Lehman, L.H., Gow, B.J., Fernandes, C., Xie, C., Johnson, A., Mark, R.G. and Heldt, T. (2026) 'PhysioNet as a global platform for biomedical research', *Nature Health*, 1(8), pp. 792–795. doi:10.1038/s44360-026-00096-z.
+
+**Software**
+
+- Paszke, A. et al. (2019) 'PyTorch: an imperative style, high-performance deep learning library', *Advances in Neural Information Processing Systems 32 (NeurIPS 2019)*. arXiv:1912.01703, doi:10.48550/arXiv.1912.01703.
+- Pedregosa, F. et al. (2011) 'Scikit-learn: machine learning in Python', *Journal of Machine Learning Research*, 12(85), pp. 2825–2830.
+- Xie, C., McCullum, L., Johnson, A., Pollard, T., Gow, B. and Moody, B. (2023) *Waveform Database Software Package (WFDB) for Python* (version 4.1.0). PhysioNet. doi:10.13026/9njx-6322. (Version 4.3.1 from PyPI was used.)
+
+Accessed 9 November 2026. Kachuee, Fazeli and Sarrafzadeh (2018) is the source of the pre-segmented Kaggle version of MIT-BIH. It was not used here because its rows hold 187 samples and a label but no record identifier, so it cannot be split by patient.
+
+<details>
+<summary><b>Run it, retrain or rebuild the media</b></summary>
+
+### Install
+
+Tested on Windows 11 with Python 3.13.7 and an RTX 3060 Ti. Versions are pinned in `requirements.txt`.
+
+```bash
+python -m venv .venv
+.venv/Scripts/pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu126   # CPU: pip install torch==2.14.1
+.venv/Scripts/pip install -r requirements.txt
+```
+
+One input must be placed by hand: download the MIT-BIH Arrhythmia Database v1.0.0 from https://physionet.org/content/mitdb/1.0.0/ and unzip it so the record files sit in `data/mitdb/` (for example `data/mitdb/100.hea`, `100.dat`, `100.atr`).
+
+### Explore the saved models (no training needed)
 
 ```bash
 .venv/Scripts/streamlit run explorer.py --browser.gatherUsageStats false
 ```
 
-What it does:
-- Pick a checkpoint, including the historical v1 ones through the legacy loader, and a recording whose **subject** the model never saw in training or validation.
-- Step through beats, or filter to **correct**, **wrong class**, **missed abnormal** and **false alarms**.
-- For each beat, see the ±3 s context, the 504-sample model input, the reference and predicted class, the **model probabilities** (softmax outputs, not calibrated confidence) and the surrounding **RR intervals**.
-- Whole-record results sit next to the beat view, with exact-class results and alarm results shown separately.
-- **Alarm threshold slider** on *p_abnormal = 1 − p(N)*. This decision is separate from the 4-class argmax. The validation-selected default is shown, and any other value is labelled **exploratory** (chosen while looking at test data). A recall/precision-vs-threshold plot shows the trade-off.
+### Retrain and evaluate
 
-Checkpoints load without retraining, and records and inference results are cached.
+```bash
+.venv/Scripts/python -m pytest                                  # 15 unit tests
+.venv/Scripts/python run_experiments.py --out runs/my_run       # 4 configs x 3 seeds, about 5 min on an RTX 3060 Ti
+.venv/Scripts/python summarize.py runs/my_run                   # writes runs/my_run/summary.md
+```
 
-## Demo video
+`run_experiments.py` refuses to overwrite an existing run directory. Each run records its records per partition, seeds, hyperparameters and software versions in `config.json`. CUDA training is seeded and set to deterministic mode where PyTorch allows it; some kernels remain nondeterministic, so reruns can differ slightly.
 
-`runs/strict_2026-11-08/demo_record_200.mp4` shows the validation-selected model on record 200.
-- The screen says the 20 s segment was **chosen for its high concentration of annotated abnormal beats**.
-- **False alarms** and **missed beats** are labelled on each beat.
-- Exact-class correctness and alarm correctness are counted separately.
-- The closing card gives whole-recording results. On record 200 the model caught 825 of 857 abnormal beats but raised false alarms on 412 of 1,742 N-group beats (23.7%).
+### Render a demo video
 
-Videos (both also attached to the [GitHub release](https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0) for direct download):
-- [runs/strict_2026-11-08/demo_record_200.mp4](runs/strict_2026-11-08/demo_record_200.mp4): current version (validation-selected model, strict split)
-- [historical/v1/results/demo_record_200.mp4](historical/v1/results/demo_record_200.mp4): v1 version, kept for reference (see [historical/v1](historical/v1/README.md) for its caveats)
+Needs `ffmpeg` on PATH. The script refuses any recording whose subject the checkpoint saw in training or validation.
 
 ```bash
 .venv/Scripts/python demo.py --checkpoint runs/strict_2026-11-08/checkpoints/cnn+rr_weighted_seed1.pt --record 200
 .venv/Scripts/python demo.py --checkpoint historical/v1/results/cnn+rr_unweighted.pt --legacy --record 200 --out v1_check.mp4
 ```
 
-The demo refuses records whose subject is in the checkpoint's training or validation metadata (for example 202 for any model trained on 201). It needs `ffmpeg` on PATH.
-
-## Reproduce
-
-Tested on Windows 11, Python 3.13.7, RTX 3060 Ti. Versions are pinned in `requirements.txt`, and each run also records them in its `config.json`.
-
-```bash
-python -m venv .venv
-.venv/Scripts/pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu126   # CPU: pip install torch==2.14.1
-.venv/Scripts/pip install -r requirements.txt
-# download https://physionet.org/content/mitdb/1.0.0/ and unzip to data/mitdb
-.venv/Scripts/python -m pytest                                        # 15 unit tests
-.venv/Scripts/python run_experiments.py --out runs/my_run             # ~5 min on an RTX 3060 Ti; refuses to overwrite
-.venv/Scripts/python summarize.py runs/my_run                         # writes runs/my_run/summary.md
-```
-
-Each run directory holds:
-- `config.json`: records per partition, subject exceptions, hyperparameters, preprocessing, seeds and software versions.
-- `metrics.json`: every metric, per seed and per patient, plus confusion matrices and bootstrap CIs.
-- `checkpoints/*.pt`: weights plus architecture, class order, preprocessing, split, records, seed and threshold.
-- `predictions/*.npz`: test-set probabilities.
-- `train.log`, plots and `summary.md`.
-
-CUDA training is seeded and set to deterministic mode where PyTorch supports it. Some kernels are still nondeterministic, so reruns can differ slightly.
-
-## Code layout
+### Code layout
 
 | Path | Role |
 |---|---|
-| `ecgcnn/data.py` | record → subject map, splits, AAMI labels, RR features, window extraction, input validation |
-| `ecgcnn/model.py` | 1D CNN, checkpoint save/load (with explicit `legacy=True` for v1 files), batched inference |
+| `ecgcnn/data.py` | record-to-subject map, splits, AAMI labels, RR features, windows, input checks |
+| `ecgcnn/model.py` | 1D CNN, self-describing checkpoints, explicit `legacy=True` loading for v1 files |
 | `ecgcnn/train.py` | seeded training with validation early stopping |
-| `ecgcnn/metrics.py` | confusion-based metrics (undefined → `None` + reason), alarm metrics, patient bootstrap |
+| `ecgcnn/metrics.py` | confusion-matrix metrics (undefined values kept as undefined), alarm metrics, patient bootstrap |
 | `ecgcnn/inference.py` | per-record inference, beat status, subject-based eligibility |
-| `ecgcnn/plots.py` | plots from saved metrics |
-| `run_experiments.py`, `summarize.py`, `demo.py`, `explorer.py` | command-line entry points / app |
-| `tests/test_core.py` | subject separation, label mapping, RR features, metrics, checkpoint compatibility |
+| `run_experiments.py`, `summarize.py`, `demo.py`, `explorer.py` | entry points |
 
-## Limitations
+### Limitations
 
-- **Annotated beat locations.** Beats are located from the cardiologists' annotations, not detected automatically.
-- **RR features are offline.** They use the *next* beat and the *whole recording's* mean RR. Delaying the label on screen until the next beat arrives doesn't fix this: whole-record normalisation still uses future data, so the pipeline isn't suitable for live use as it stands.
-- **N group ≠ normal sinus rhythm.** The AAMI N group includes bundle branch block (L, R) and escape beats (e, j).
-- **Small, concentrated test classes.** S is dominated by record 232, and F by record 213 (362 of 387).
-- **The validation partition is small and fixed** (30 F beats), so model and threshold selection are noisy. There is no cross-validation.
-- **The random beat split (v1 only) is doubly optimistic.** It mixes beats from the same patient, and neighbouring 1.4 s windows overlap, so test windows contain samples seen in training.
-- Research only, not a medical device.
+- Beat positions come from the reference annotations; there is no beat detector.
+- RR features use the next beat and the whole-recording mean, so the pipeline is offline only.
+- The AAMI N group includes bundle branch block and escape beats, so it is broader than normal sinus rhythm.
+- The validation partition is small and fixed (30 F beats). There is no cross-validation.
+- Test classes are concentrated: record 232 holds 1,382 of 1,782 S beats, and record 213 holds 362 of 387 F beats.
+- DS2 results had been inspected during v1, so DS2 is not an untouched holdout.
 
-## Optional extensions (not implemented, untested)
+</details>
 
-- **A. Patient-specific baseline:** compare each beat with a robust template built only from that patient's earlier, unlabelled beats, plus relative timing. Warm-up and update rules would have to avoid reference labels. Evaluate under the identical strict split.
-- **B. Noise robustness:** add baseline wander, muscle and electrode-motion noise from the PhysioNet Noise Stress Test Database to held-out recordings. Its prepared noisy records are built from 118 and 119, which are *training* records here, so they can't count as unseen-patient test data.
-- **C. Automatic beat detection:** a separate detected-peak mode, compared with annotation mode by counting missed and extra beats. An offline detector shouldn't be called streaming-ready unless that behaviour is tested.
+## Licence
 
-## Licensing and attribution
-
-- **Code:** no license chosen yet. Add a `LICENSE` file (for example MIT) before publishing if others should reuse it.
-- **Data:** MIT-BIH is **not** included in this repository. It is distributed by PhysioNet under the [Open Data Commons Attribution License v1.0](https://physionet.org/content/mitdb/view-license/1.0.0/). Please cite:
-  - Moody, G., & Mark, R. (2005). *MIT-BIH Arrhythmia Database* (version 1.0.0). PhysioNet. https://doi.org/10.13026/C2F305
-  - Moody GB, Mark RG. *The impact of the MIT-BIH Arrhythmia Database.* IEEE Eng in Med and Biol 20(3):45-50 (2001).
-  - The standard PhysioNet citation listed on the dataset page.
-- **Methods referenced:** de Chazal, O'Dwyer & Reilly, *Automatic classification of heartbeats using ECG morphology and heartbeat interval features*, IEEE TBME 2004 (DS1/DS2 split) · Kachuee, Fazeli & Sarrafzadeh, *ECG Heartbeat Classification: A Deep Transferable Representation*, 2018, [arXiv:1805.00794](https://arxiv.org/abs/1805.00794) · [wfdb-python](https://github.com/MIT-LCP/wfdb-python)
+Code: [MIT](LICENSE). The ECG data and reference labels keep the MIT-BIH Arrhythmia Database's terms (Open Data Commons Attribution License v1.0); see [DATA-LICENCES.md](DATA-LICENCES.md). The animations and images in `docs/media/` are recordings and excerpts of this project's outputs that show MIT-BIH data, shared under the same attribution terms.
