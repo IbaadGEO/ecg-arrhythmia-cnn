@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="84" viewBox="0 0 820 84" role="img" aria-label="The pipeline: an ECG (MLII lead, 360 Hz) gives each beat at its annotated R peak; the input is 504 samples plus 4 RR ratios; a 1D CNN with about 190k parameters outputs p(N,S,V,F); the class is the argmax; the alarm fires when 1 − p(N) is at least the threshold t.">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#9198a1"/></marker></defs>
+<g font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" text-anchor="middle">
+<rect x="1.0" y="1" width="123.8" height="82" rx="8" fill="#161b22" stroke="#3d444d" stroke-width="1.2"/>
+<text x="62.9" y="32.0" font-size="15" font-weight="600" fill="#f0f6fc">ECG</text>
+<text x="62.9" y="63.0" font-size="13" fill="#9198a1">MLII, 360 Hz</text>
+<line x1="126.8" y1="42.0" x2="136.8" y2="42.0" stroke="#9198a1" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="139.8" y="1" width="123.8" height="82" rx="8" fill="#161b22" stroke="#3d444d" stroke-width="1.2"/>
+<text x="201.7" y="32.0" font-size="15" font-weight="600" fill="#f0f6fc">Beat</text>
+<text x="201.7" y="54.0" font-size="13" fill="#9198a1">annotated</text>
+<text x="201.7" y="72.0" font-size="13" fill="#9198a1">R peak</text>
+<line x1="265.7" y1="42.0" x2="275.7" y2="42.0" stroke="#9198a1" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="278.7" y="1" width="123.8" height="82" rx="8" fill="#161b22" stroke="#3d444d" stroke-width="1.2"/>
+<text x="340.6" y="32.0" font-size="15" font-weight="600" fill="#f0f6fc">Input</text>
+<text x="340.6" y="54.0" font-size="13" fill="#9198a1">504 samples</text>
+<text x="340.6" y="72.0" font-size="13" fill="#9198a1">+ 4 RR ratios</text>
+<line x1="404.5" y1="42.0" x2="414.5" y2="42.0" stroke="#9198a1" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="417.5" y="1" width="123.8" height="82" rx="8" fill="#161b22" stroke="#3d444d" stroke-width="1.2"/>
+<text x="479.4" y="32.0" font-size="15" font-weight="600" fill="#f0f6fc">1D CNN</text>
+<text x="479.4" y="63.0" font-size="13" fill="#9198a1">~190k params</text>
+<line x1="543.3" y1="42.0" x2="553.3" y2="42.0" stroke="#9198a1" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="556.3" y="1" width="123.8" height="82" rx="8" fill="#161b22" stroke="#3d444d" stroke-width="1.2"/>
+<text x="618.2" y="32.0" font-size="15" font-weight="600" fill="#f0f6fc">Class</text>
+<text x="618.2" y="54.0" font-size="13" fill="#9198a1">argmax of</text>
+<text x="618.2" y="72.0" font-size="13" fill="#9198a1">p(N,S,V,F)</text>
+<line x1="682.2" y1="42.0" x2="692.2" y2="42.0" stroke="#9198a1" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="695.2" y="1" width="123.8" height="82" rx="8" fill="#161b22" stroke="#d9a53f" stroke-width="2"/>
+<text x="757.1" y="32.0" font-size="15" font-weight="600" fill="#f0f6fc">Alarm</text>
+<text x="757.1" y="63.0" font-size="13" fill="#9198a1">1 − p(N) ≥ t</text>
+</g></svg>

@@ -24,14 +24,10 @@ About 9 in 10 beats are in the N group, so a model that always answers N scores 
 
 This project asks one question. Does class-weighted cross-entropy raise per-class recall on the rare S, V and F beats, compared with plain cross-entropy, for people the model was not trained on?
 
-```mermaid
-flowchart LR
-  A["<b>ECG</b><br/>MLII, 360 Hz"] --> B["<b>Beat</b><br/>annotated<br/>R peak"]
-  B --> C["<b>Input</b><br/>504 samples<br/>+ 4 RR ratios"]
-  C --> D["<b>1D CNN</b><br/>~190k params"]
-  D --> E["<b>Class</b><br/>argmax of<br/>p(N,S,V,F)"]
-  E --> F["<b>Alarm</b><br/>1 − p(N) ≥ t"]
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/flow-dark.svg">
+  <img src="docs/media/flow-light.svg" width="820" alt="The pipeline: an ECG (MLII lead, 360 Hz) gives each beat at its annotated R peak; the input is 504 samples plus 4 RR ratios; a 1D CNN with about 190k parameters outputs p(N,S,V,F); the class is the argmax; the alarm fires when 1 − p(N) is at least the threshold t.">
+</picture>
 
 The pipeline classifies beats at the annotated positions. It does not detect beats itself and it does not run live: the RR features use the next beat and the whole recording's mean RR interval.
 
