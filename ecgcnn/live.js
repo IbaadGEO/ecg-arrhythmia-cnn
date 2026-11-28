@@ -10,9 +10,14 @@ const clamp = (u, a = 0, b = 1) => Math.max(a, Math.min(b, u));
 const ease = (u) => { u = clamp(u); return u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2; };
 const phase = (t, a, b) => clamp((t - a) / (b - a));
 const lerp = (a, b, u) => a + (b - a) * u;
+const NARROW = 560;  // below this width (phones) side panels move under the diagram, which grows by scene.extra(w)
 
 function txt(ctx, s, x, y, { font = `12px ${BODY}`, color = C.text, align = "left", base = "middle" } = {}) {
   ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; ctx.fillText(s, x, y);
+}
+function fit(ctx, s, max, size, family) {  // largest font up to `size` px at which `s` fits in `max` px
+  ctx.font = `${size}px ${family}`; const w = ctx.measureText(s).width;
+  return `${w > max ? Math.max(8, Math.floor(size * max / w)) : size}px ${family}`;
 }
 function line(ctx, pts, color, lw = 1.2) {
   if (pts.length < 2) return;
@@ -77,8 +82,9 @@ const SCENES = {
     const VIEW = 6, n = d.sig.length;
     return {
       duration: d.dur,
+      extra: (w) => (w < NARROW ? 275 : 0),
       draw(ctx, w, h, t) {
-        const px = 52, pw = Math.max(260, w - 250 - px), ph = h - 40, py = 6;
+        const nar = w < NARROW, px = 52, pw = nar ? w - px - 4 : Math.max(260, w - 250 - px), ph = h - 40, py = 6;
         const lo = Math.max(0, t - VIEW * 0.85), hi = lo + VIEW;
         const X = (s) => px + ((s - lo) / VIEW) * pw, Y = (v) => py + 26 + (1 - (v - d.lo) / (d.hi - d.lo)) * (ph - 60);
         paper(ctx, px, py, pw, ph, pw / (VIEW / 0.04));  // 0.04 s small squares, 0.2 s large
@@ -100,19 +106,19 @@ const SCENES = {
           if (bt.status >= 2) txt(ctx, bt.status === 2 ? "missed" : "false alarm", x, py + ph - 26, { font: `10px ${BODY}`, color: C.status[bt.status], align: "center" });
         });
         // readout panel
-        const rx = px + pw + 18, rw = w - rx;
-        txt(ctx, "LATEST BEAT", rx, py + 10, { font: `600 12px ${HEAD}`, color: C.text });
+        const rx = nar ? 0 : px + pw + 18, rw = w - rx, ry = nar ? h - 6 : py;
+        txt(ctx, "LATEST BEAT", rx, ry + 10, { font: `600 12px ${HEAD}`, color: C.text });
         if (latest >= 0) {
           const bt = d.beats[latest], grow = ease((t - bt.ready) / 0.35);
-          probBars(ctx, rx, py + 22, rw, 20, d.names, bt.probs, grow, bt.pred);
-          gauge(ctx, rx, py + 118, rw - 4, bt.pabn * grow, d.thr, "chance not ordinary");
-        } else txt(ctx, "waiting for the first full window…", rx, py + 40, { font: `11px ${BODY}`, color: C.muted });
-        txt(ctx, "SO FAR", rx, py + 178, { font: `600 12px ${HEAD}`, color: C.text });
+          probBars(ctx, rx, ry + 22, rw, 20, d.names, bt.probs, grow, bt.pred);
+          gauge(ctx, rx, ry + 118, rw - 4, bt.pabn * grow, d.thr, "chance not ordinary");
+        } else txt(ctx, "waiting for the first full window…", rx, ry + 40, { font: `11px ${BODY}`, color: C.muted });
+        txt(ctx, "SO FAR", rx, ry + 178, { font: `600 12px ${HEAD}`, color: C.text });
         const rows = [["beats read", `${seen.all}`, C.text], ["correct", `${tally[0]}`, C.text],
           ["alarm, wrong type", `${tally[1]}`, C.status[1]], ["missed", `${tally[2]}`, C.status[2]], ["false alarms", `${tally[3]}`, C.status[3]]];
         rows.forEach(([l, v, c], k) => {
-          txt(ctx, l, rx, py + 198 + k * 17, { font: `11px ${BODY}`, color: c });
-          txt(ctx, v, w - 4, py + 198 + k * 17, { font: `11px ${MONO}`, align: "right" });
+          txt(ctx, l, rx, ry + 198 + k * 17, { font: `11px ${BODY}`, color: c });
+          txt(ctx, v, w - 4, ry + 198 + k * 17, { font: `11px ${MONO}`, align: "right" });
         });
         txt(ctx, `${t.toFixed(1)} s`, px + pw - 6, py + ph + 16, { font: `11px ${MONO}`, color: C.muted, align: "right" });
       },
@@ -124,7 +130,7 @@ const SCENES = {
     return {
       duration: 6,
       draw(ctx, w, h, t) {
-        const pad = 10, pw = w - 2 * pad, ph = h - 50, top = 8;
+        const nar = w < NARROW, pad = 10, pw = w - 2 * pad, ph = h - 50, top = 8;
         const [rlo, rhi] = extent(d.raw), [zlo, zhi] = extent(d.x);
         const nRaw = d.raw.length, ws = d.win[0], we = d.win[1];
         const cut = ease(phase(t, 1.4, 3.0)), resc = ease(phase(t, 3.4, 4.8)), fade = ease(phase(t, 0.2, 1.0));
@@ -147,8 +153,8 @@ const SCENES = {
         line(ctx, pts, C.teal, 1.6);
         const msg = t < 1.4 ? "1 · a 1.4 s slice centred on this beat's main spike"
           : t < 3.2 ? `2 · cut out: ${d.x.length} measurements` : "3 · rescaled: average 0, typical spread 1, so only the shape is left";
-        txt(ctx, msg, pad, h - 26, { font: `12px ${BODY}`, color: C.text });
-        txt(ctx, resc > 0.5 ? "units: standard deviations" : "units: millivolts", w - pad, h - 26, { font: `11px ${MONO}`, color: C.muted, align: "right" });
+        txt(ctx, msg, pad, h - 26, { font: fit(ctx, msg, w - 2 * pad, 12, BODY), color: C.text });
+        txt(ctx, resc > 0.5 ? "units: standard deviations" : "units: millivolts", w - pad, nar ? h - 6 : h - 26, { font: `11px ${MONO}`, color: C.muted, align: "right" });
       },
     };
   },
@@ -158,8 +164,9 @@ const SCENES = {
     const n = d.x.length;
     return {
       duration: 7,
+      extra: (w) => (w < NARROW ? 175 : 0),
       draw(ctx, w, h, t) {
-        const iw = 210, pw = w - iw - 16, top = 8, ph = h - 40, k = Math.min(n - 1, Math.floor(phase(t, 0.3, 6.6) * n));
+        const nar = w < NARROW, iw = nar ? Math.min(w, 320) : 210, pw = nar ? w : w - iw - 16, top = 8, ph = h - 40, k = Math.min(n - 1, Math.floor(phase(t, 0.3, 6.6) * n));
         const [xlo, xhi] = extent(d.x), amax = Math.max(1e-6, extent(d.act)[1]);
         const X = (i) => (i / (n - 1)) * pw, Y = (v) => top + 6 + (1 - (v - xlo) / (xhi - xlo)) * (ph * 0.62);
         const A = (v) => top + ph - 4 - (v / amax) * (ph * 0.3);
@@ -175,23 +182,23 @@ const SCENES = {
         ctx.strokeStyle = C.gold; ctx.lineWidth = 1.5; ctx.strokeRect(X(a) - 2, top + 2, X(b) - X(a) + 4, ph * 0.64);
         ctx.fillStyle = "rgba(242,201,76,0.6)"; ctx.fillRect(X(k), top + ph * 0.66, 1, ph * 0.34 - 4);
         // inset: samples x weights
-        const ix = pw + 16, cw = (iw - 10) / 7;
-        txt(ctx, "7 SAMPLES × 7 WEIGHTS", ix, top + 8, { font: `600 11px ${HEAD}` });
+        const ix = nar ? 0 : pw + 16, it = nar ? h : top, cw = (iw - 10) / 7;
+        txt(ctx, "7 SAMPLES × 7 WEIGHTS", ix, it + 8, { font: `600 11px ${HEAD}` });
         const prods = []; let sum = 0;
         for (let j = 0; j < 7; j++) { const i = k - 3 + j, v = i >= 0 && i < n ? d.x[i] : 0; prods.push([v, d.w[j]]); sum += v * d.w[j]; }
         const wmax = Math.max(...d.w.map(Math.abs), 1e-6), vmax = Math.max(...prods.map((p) => Math.abs(p[0])), 1e-6);
         prods.forEach(([v, wt], j) => {
           const cx = ix + j * cw + cw / 2;
-          ctx.fillStyle = C.teal; const hv = (v / vmax) * 22; ctx.fillRect(cx - 5, top + 50 - Math.max(hv, 0), 10, Math.abs(hv));
-          ctx.fillStyle = wt >= 0 ? C.text : C.gold; const hw = (wt / wmax) * 22; ctx.fillRect(cx - 5, top + 104 - Math.max(hw, 0), 10, Math.abs(hw));
+          ctx.fillStyle = C.teal; const hv = (v / vmax) * 22; ctx.fillRect(cx - 5, it + 50 - Math.max(hv, 0), 10, Math.abs(hv));
+          ctx.fillStyle = wt >= 0 ? C.text : C.gold; const hw = (wt / wmax) * 22; ctx.fillRect(cx - 5, it + 104 - Math.max(hw, 0), 10, Math.abs(hw));
         });
-        ctx.fillStyle = C.gridMajor; ctx.fillRect(ix, top + 50, iw - 10, 1); ctx.fillRect(ix, top + 104, iw - 10, 1);
-        txt(ctx, "signal", ix, top + 22, { font: `10px ${BODY}`, color: C.teal });
-        txt(ctx, "weights", ix, top + 76, { font: `10px ${BODY}`, color: C.muted });
-        txt(ctx, "multiply and add", ix, top + 140, { font: `11px ${BODY}`, color: C.muted });
-        txt(ctx, sum.toFixed(2), ix + iw - 10, top + 140, { font: `13px ${MONO}`, align: "right" });
-        txt(ctx, d.bn ? "after learned scaling + ReLU" : "ReLU (negatives → 0)", ix, top + 162, { font: `11px ${BODY}`, color: C.muted });
-        txt(ctx, d.act[k].toFixed(2), ix + iw - 10, top + 162, { font: `13px ${MONO}`, color: C.gold, align: "right" });
+        ctx.fillStyle = C.gridMajor; ctx.fillRect(ix, it + 50, iw - 10, 1); ctx.fillRect(ix, it + 104, iw - 10, 1);
+        txt(ctx, "signal", ix, it + 22, { font: `10px ${BODY}`, color: C.teal });
+        txt(ctx, "weights", ix, it + 76, { font: `10px ${BODY}`, color: C.muted });
+        txt(ctx, "multiply and add", ix, it + 140, { font: `11px ${BODY}`, color: C.muted });
+        txt(ctx, sum.toFixed(2), ix + iw - 10, it + 140, { font: `13px ${MONO}`, align: "right" });
+        txt(ctx, d.bn ? "after learned scaling + ReLU" : "ReLU (negatives → 0)", ix, it + 162, { font: `11px ${BODY}`, color: C.muted });
+        txt(ctx, d.act[k].toFixed(2), ix + iw - 10, it + 162, { font: `13px ${MONO}`, color: C.gold, align: "right" });
         txt(ctx, `${((k - n / 2) / d.fs).toFixed(2)} s from the main spike`, 0, h - 16, { font: `11px ${MONO}`, color: C.muted });
       },
     };
@@ -242,8 +249,9 @@ const SCENES = {
     const parts = [["shape", d.shape, C.teal], ["timing", d.timing, C.sky], ["starting point", d.bias, C.muted]].filter((p) => p[1]);
     return {
       duration: 7,
+      extra: (w) => (w < NARROW ? 220 : 0),
       draw(ctx, w, h, t) {
-        const half = Math.floor(w * 0.55), lw = 112, top = 26, rowH = Math.min(34, (h - top - 70) / 4);
+        const nar = w < NARROW, half = nar ? w : Math.floor(w * 0.55), lw = 112, top = 26, rowH = Math.min(34, (h - top - 70) / 4);
         let span = 1e-6;
         d.names.forEach((_, k) => { let c = 0; for (const [, v] of parts) { c += v[k]; span = Math.max(span, Math.abs(c)); } });
         const zx = lw + (half - lw - 60) / 2, sc = (half - lw - 70) / 2 / span;
@@ -267,11 +275,11 @@ const SCENES = {
         let ly = top + rowH * 4 + 14, lx = 0;
         parts.forEach(([nm, , col]) => { ctx.fillStyle = col; ctx.fillRect(lx, ly - 4, 10, 8); txt(ctx, nm, lx + 14, ly, { font: `10px ${BODY}`, color: C.muted }); lx += ctx.measureText(nm).width + 34; });
         // softmax and alarm
-        const rx = half + 24, rw = w - rx, u = ease(phase(t, 3.8, 5.0));
-        txt(ctx, "PERCENTAGES (SOFTMAX)", rx, 10, { font: `600 12px ${HEAD}`, color: u > 0 ? C.text : C.muted });
-        probBars(ctx, rx, top, rw, rowH, d.names, d.probs, u, d.probs.indexOf(Math.max(...d.probs)));
+        const rx = nar ? 0 : half + 24, rw = w - rx, oy = nar ? h : 0, u = ease(phase(t, 3.8, 5.0));
+        txt(ctx, "PERCENTAGES (SOFTMAX)", rx, oy + 10, { font: `600 12px ${HEAD}`, color: u > 0 ? C.text : C.muted });
+        probBars(ctx, rx, oy + top, rw, rowH, d.names, d.probs, u, d.probs.indexOf(Math.max(...d.probs)));
         const g = ease(phase(t, 5.2, 6.2));
-        if (g > 0) gauge(ctx, rx, top + rowH * 4 + 16, rw - 4, (1 - d.probs[0]) * g, d.thr, "100% − N group = chance not ordinary");
+        if (g > 0) gauge(ctx, rx, oy + top + rowH * 4 + 16, rw - 4, (1 - d.probs[0]) * g, d.thr, "100% − N group = chance not ordinary");
       },
     };
   },
@@ -281,21 +289,22 @@ const SCENES = {
     const n = d.xs.length;
     return {
       duration: 7,
+      extra: (w) => (w < NARROW ? 18 : 0),
       draw(ctx, w, h, t) {
-        const k = Math.min(n - 1, Math.floor(phase(t, 0.2, 6.6) * n)), top = 8, th = (h - 60) * 0.45, by = top + th + 16, bh = h - by - 34;
+        const nar = w < NARROW, k = Math.min(n - 1, Math.floor(phase(t, 0.2, 6.6) * n)), top = 8, th = (h - 60) * 0.45, by = top + th + 16, bh = h - by - 34;
         frame(ctx, 0, top, w, th);
         if (d.mode === "occlude") {
           const m = d.beat.length, [lo, hi] = extent(d.beat), X = (i) => (i / (m - 1)) * w, Y = (v) => top + 4 + (1 - (v - lo) / (hi - lo)) * (th - 8);
           const c = d.centres[k];
           line(ctx, Array.from(d.beat, (v, i) => [X(i), Y(Math.abs(i - c) <= d.hw ? 0 : v)]), C.teal, 1.2);
           ctx.fillStyle = "rgba(242,201,76,0.18)"; ctx.fillRect(X(c - d.hw), top, X(2 * d.hw) - X(0), th);
-          txt(ctx, "flattened stretch", X(c), top + th - 8, { font: `10px ${BODY}`, color: C.gold, align: "center" });
+          txt(ctx, "flattened stretch", clamp(X(c), 50, w - 50), top + th - 8, { font: `10px ${BODY}`, color: C.gold, align: "center" });
         } else {
           const gap = d.xs[k], unit = (w - 80) / (2 * Math.max(...d.xs)), x0 = 40, x1 = x0 + gap * unit, x2 = x1 + d.post * unit;
           const spike = (x, col) => line(ctx, [[x - 14, top + th * 0.7], [x - 4, top + th * 0.7], [x, top + 10], [x + 4, top + th * 0.85], [x + 10, top + th * 0.7], [x + 30, top + th * 0.7]], col, 1.5);
           spike(x0, C.muted); spike(x1, C.teal); spike(x2, C.muted);
           ctx.fillStyle = C.gold; ctx.fillRect(x0, top + th - 14, x1 - x0, 2);
-          txt(ctx, `gap before: ${gap.toFixed(2)}× average`, (x0 + x1) / 2, top + th - 24, { font: `11px ${MONO}`, color: C.gold, align: "center" });
+          txt(ctx, `gap before: ${gap.toFixed(2)}× average`, clamp((x0 + x1) / 2, 90, w - 90), top + th + 8, { font: `11px ${MONO}`, color: C.gold, align: "center" });
         }
         // the curve so far
         frame(ctx, 0, by, w, bh);
@@ -307,7 +316,7 @@ const SCENES = {
         line(ctx, Array.from(d.pabn.slice(0, k + 1), (v, i) => [X(i), Y(v)]), C.teal, 1.8);
         ctx.fillStyle = d.pabn[k] >= d.thr ? C.status[2] : C.teal; ctx.beginPath(); ctx.arc(X(k), Y(d.pabn[k]), 4, 0, 7); ctx.fill();
         txt(ctx, `chance not ordinary: ${(d.pabn[k] * 100).toFixed(0)}%`, 0, h - 14, { font: `12px ${MONO}` });
-        txt(ctx, d.xlabel, w, h - 14, { font: `11px ${BODY}`, color: C.muted, align: "right" });
+        txt(ctx, d.xlabel, nar ? 0 : w, nar ? h + 6 : h - 14, { font: fit(ctx, d.xlabel, w, 11, BODY), color: C.muted, align: nar ? "left" : "right" });
       },
     };
   },
@@ -324,14 +333,15 @@ export default function (component) {
   canvas.setAttribute("aria-label", data.alt || data.caption || "animated diagram");
   const H = data.height || 260, scene = SCENES[data.scene](data), hold = 2.5, ctx = canvas.getContext("2d");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let t = reduce ? scene.duration : 0, last = null, raf = 0, w = 0, playing = false;
+  let t = reduce ? scene.duration : 0, last = null, raf = 0, w = 0, ch = H, playing = false;
   const draw = () => {
-    ctx.clearRect(0, 0, w, H); ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, H);
+    ctx.clearRect(0, 0, w, ch); ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, ch);
     scene.draw(ctx, w, H, Math.min(t, scene.duration));
   };
   const size = () => {
     const dpr = window.devicePixelRatio || 1; w = Math.max(200, root.clientWidth - 16);
-    canvas.width = w * dpr; canvas.height = H * dpr; canvas.style.width = `${w}px`; canvas.style.height = `${H}px`;
+    ch = H + (scene.extra ? scene.extra(w) : 0);
+    canvas.width = w * dpr; canvas.height = ch * dpr; canvas.style.width = `${w}px`; canvas.style.height = `${ch}px`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); draw();
   };
   const tick = (now) => {

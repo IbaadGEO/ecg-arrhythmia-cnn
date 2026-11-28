@@ -73,6 +73,15 @@ def _plain(v):
     return v
 
 
+# Phones get narrower figures, so their text is not shrunk to fit a ~350 px column.
+PHONE = "Mobi" in st.context.headers.get("User-Agent", "")
+
+
+def subplots(size):
+    w, h = size
+    return plt.subplots(figsize=(min(w, 4.6), h + 0.4) if PHONE else (w, h))
+
+
 def live(key, scene, height, caption, alt=None, **d):
     """Mount one animated diagram; every value it draws comes from here."""
     LIVE(key=key, data=_plain({"scene": scene, "height": height, "caption": caption, "alt": alt or caption, **d}))
@@ -181,12 +190,15 @@ with c2:
     st.table(pd.DataFrame(rows, columns=["measure", "value"]).set_index("measure"))
     grid = np.round(np.arange(0.01, 1.0, 0.01), 2)
     curve = [metrics.flag_metrics(y, p_abn, t) for t in grid]
-    fig, ax = plt.subplots(figsize=(5, 2.6))
+    fig, ax = subplots((5, 2.6))
     ax.plot(grid, [c["recall"] for c in curve], label="abnormal recall")
     ax.plot(grid, [c["precision"] if c["precision"] is not None else np.nan for c in curve], label="alarm precision")
     ax.axvline(thr, color=TEXT, ls=":", lw=1, label="current")
     if val_thr is not None: ax.axvline(val_thr, color=GOLD, ls="--", lw=1, label="validation-selected")
-    ax.set_xlabel("p_abnormal threshold"); ax.set_ylim(0, 1.02); ax.legend(fontsize=7); ax.set_title(f"Record {rec} (test data: exploratory)", fontsize=9)
+    ax.set_xlabel("p_abnormal threshold"); ax.set_ylim(0, 1.02)
+    # on a phone the legend would cover the curves, so it goes under the axis
+    ax.legend(fontsize=7, **dict(ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.32)) if PHONE else {})
+    ax.set_title(f"Record {rec} (test data: exploratory)", fontsize=9)
     fig.tight_layout(); st.pyplot(fig); plt.close(fig)
 
 # ---- beat navigation ----------------------------------------------------------------------------------------------
@@ -213,7 +225,7 @@ t = pos[i] / fs
 left, right = st.columns([3, 2])
 with left:
     a, b = max(0, pos[i] - 3 * fs), min(len(sig), pos[i] + 3 * fs)
-    fig, ax = plt.subplots(figsize=(9, 3))
+    fig, ax = subplots((9, 3))
     ax.plot(np.arange(a, b) / fs, sig[a:b], color=TEAL, lw=1)
     lo_y, hi_y = sig[a:b].min(), sig[a:b].max()
     for j in np.where((pos >= a) & (pos < b))[0]:
@@ -225,7 +237,7 @@ with left:
     ax.set_title("±3 s around this beat · predictions above (outlined = alarm), reference below", fontsize=9)
     ax.legend(loc="lower right", fontsize=7); fig.tight_layout(); st.pyplot(fig); plt.close(fig)
 
-    fig, ax = plt.subplots(figsize=(9, 2.2))
+    fig, ax = subplots((9, 2.2))
     ax.plot(np.arange(-data.HALF, data.HALF) / fs, d["X"][i], color=TEAL, lw=1)
     ax.axvline(0, color=GOLD); ax.set_xlabel("seconds from R peak"); ax.set_yticks([])
     ax.set_title("Model input: 504-sample, z-score-normalised window", fontsize=9)
@@ -311,14 +323,14 @@ with st.expander("Try changing the height, baseline or centre", expanded=True):
         st.warning("This shift extends beyond the recording."); x_try = x0
     c1, c2 = st.columns(2)
     with c1:
-        fig, ax = plt.subplots(figsize=(6, 2.2))
+        fig, ax = subplots((6, 2.2))
         w0 = sig[pos[i] - data.HALF:pos[i] + data.HALF]
         ax.plot(sec, w0, color=TEXT, lw=0.8, alpha=0.4, label="recorded")
         ax.plot(sec, w0 * gain + offset, color=GOLD, lw=1, label="changed")
         ax.set_ylabel("mV", fontsize=8); ax.set_xlabel("seconds"); ax.legend(fontsize=7, loc="upper right")
         ax.set_title("ECG before and after your change (millivolts)", fontsize=9); fig.tight_layout(); st.pyplot(fig); plt.close(fig)
     with c2:
-        fig, ax = plt.subplots(figsize=(6, 2.2))
+        fig, ax = subplots((6, 2.2))
         ax.plot(sec, x0, color=TEXT, lw=0.8, alpha=0.4, label="original input")
         ax.plot(sec, x_try, color=TEAL, lw=1, label="changed input")
         ax.set_yticks([]); ax.set_xlabel("seconds"); ax.legend(fontsize=7, loc="upper right")
@@ -373,7 +385,7 @@ with st.expander("Follow one of the 128 summary values", expanded=True):
                    blocks[-1].shape[0], int(parts["contrib"][top].argmax()) + 1)
     c1, c2 = st.columns([3, 2])
     with c1:
-        fig, ax = plt.subplots(figsize=(7, 2.2))
+        fig, ax = subplots((7, 2.2))
         ax.plot(sec, x0, color=TEAL, lw=1)
         ax2 = ax.twinx()
         resp = blocks[-1][k3 - 1]
@@ -442,13 +454,13 @@ with st.expander("Flatten the beat or change its timing", expanded=True):
     new = explain.score_parts(model, x1, r1)["probs"]
     c1, c2 = st.columns([3, 2])
     with c1:
-        fig, ax = plt.subplots(figsize=(7, 2.4))
+        fig, ax = subplots((7, 2.4))
         ax.plot(sec, x0, color=TEXT, lw=0.8, alpha=0.4, label="original")
         ax.plot(sec, x1, color=TEAL, lw=1.1, label="what the model gets")
         ax.set_yticks([]); ax.set_xlabel("seconds from the beat's main spike"); ax.legend(fontsize=7, loc="upper right")
         fig.tight_layout(); st.pyplot(fig); plt.close(fig)
     with c2:
-        fig, ax = plt.subplots(figsize=(4.5, 2.4))
+        fig, ax = subplots((4.5, 2.4))
         yy = np.arange(len(data.CLASSES))
         ax.barh(yy + 0.2, parts["probs"], 0.4, color=TEXT, alpha=0.4, label="original")
         ax.barh(yy - 0.2, new, 0.4, color=TEAL, label="after your change")
