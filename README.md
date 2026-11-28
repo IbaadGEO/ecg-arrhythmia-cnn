@@ -2,9 +2,9 @@
 
 <img src="docs/media/banner.svg" width="100%" alt="ECG Arrhythmia CNN: heartbeat classes from a 1D CNN, tested on people it never saw. Behind the title, an ECG trace from MIT-BIH record 200 with each beat labelled N, S or V by the cardiologists' reference annotations.">
 
-[![Demo videos](https://img.shields.io/badge/demo-videos-56c7b8?style=flat-square&labelColor=161c22)](https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0) ![Python 3.13](https://img.shields.io/badge/Python-3.13-f2c94c?style=flat-square&labelColor=161c22) ![PyTorch 2.14](https://img.shields.io/badge/PyTorch-2.14-f2c94c?style=flat-square&labelColor=161c22) ![Streamlit 1.67](https://img.shields.io/badge/Streamlit-1.67-f2c94c?style=flat-square&labelColor=161c22) [![Data: MIT-BIH, ODC-By 1.0](https://img.shields.io/badge/data-MIT--BIH_ODC--By_1.0-8b949a?style=flat-square&labelColor=161c22)](DATA-LICENCES.md) [![Code: MIT](https://img.shields.io/badge/code-MIT-8b949a?style=flat-square&labelColor=161c22)](LICENSE)
+[![Live explorer](https://img.shields.io/badge/live-explorer-f2c94c?style=flat-square&labelColor=161c22)](https://ecg-beat-explorer.streamlit.app) [![Demo videos](https://img.shields.io/badge/demo-videos-56c7b8?style=flat-square&labelColor=161c22)](https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0) ![Python 3.13](https://img.shields.io/badge/Python-3.13-f2c94c?style=flat-square&labelColor=161c22) ![PyTorch 2.14](https://img.shields.io/badge/PyTorch-2.14-f2c94c?style=flat-square&labelColor=161c22) ![Streamlit 1.67](https://img.shields.io/badge/Streamlit-1.67-f2c94c?style=flat-square&labelColor=161c22) [![Data: MIT-BIH, ODC-By 1.0](https://img.shields.io/badge/data-MIT--BIH_ODC--By_1.0-8b949a?style=flat-square&labelColor=161c22)](DATA-LICENCES.md) [![Code: MIT](https://img.shields.io/badge/code-MIT-8b949a?style=flat-square&labelColor=161c22)](LICENSE)
 
-**[The question](#the-question)** · **[The explorer](#the-explorer)** · **[Inside the model](#inside-the-model)** · **[Results](#results)** · **[v1 against v2](#v1-against-v2)** · **[Run it](#run-it)**
+**[Open the live explorer ↗](https://ecg-beat-explorer.streamlit.app)** · **[The question](#the-question)** · **[The explorer](#the-explorer)** · **[Inside the model](#inside-the-model)** · **[Results](#results)** · **[v1 against v2](#v1-against-v2)** · **[Run it](#run-it)**
 
 <img src="docs/media/glance.svg" width="100%" alt="At a glance: tested on 21 patients the model never saw (47,532 beats); 63.9% of abnormal beats alarmed (3,429 of 5,369); 13.4% of N-group beats falsely alarmed (5,668 of 42,163); S recall below 4% in every setup, and class weighting did not fix it.">
 
@@ -56,7 +56,7 @@
 
 ## The explorer
 
-A Streamlit app that opens any of the 16 saved checkpoints (12 from the current run, 4 from v1) on any recording its model never saw, and shows how the model reaches each answer.
+**[Open it live at ecg-beat-explorer.streamlit.app ↗](https://ecg-beat-explorer.streamlit.app)**, or run it locally (see [Run it](#run-it)). A Streamlit app that opens any of the 16 saved checkpoints (12 from the current run, 4 from v1) on any recording its model never saw, and shows how the model reaches each answer.
 
 <img src="docs/media/app.jpg" width="100%" alt="The explorer's first screen: a sidebar with checkpoint, recording and alarm threshold; whole-record results tables; a recall and precision against threshold chart; the beat filters">
 
@@ -149,7 +149,7 @@ The explorer and the README graphics use three fonts from `static/fonts/`, each 
 
 ## Run it
 
-The explorer runs from the saved checkpoints with no training. Install, data, hosting, retraining, the demo video and the code layout are below.
+The explorer runs from the saved checkpoints with no training, and is hosted at [ecg-beat-explorer.streamlit.app](https://ecg-beat-explorer.streamlit.app). Install, data, hosting, retraining, the demo video and the code layout are below.
 
 Full walkthrough of the code and protocol: [WALKTHROUGH.md](WALKTHROUGH.md) · v1 baseline and its corrections: [historical/v1/README.md](historical/v1/README.md) · Terms per file: [DATA-LICENCES.md](DATA-LICENCES.md)
 
@@ -180,7 +180,7 @@ After editing files in `ecgcnn/`, restart the server; Streamlit keeps the import
 
 ### Host the explorer on Streamlit Community Cloud (free)
 
-The repository is set up for it: the checkpoints are committed, recordings download on first use, Linux gets the CPU-only PyTorch build, and the theme and fonts load from `.streamlit/config.toml` and `static/`. On share.streamlit.io, create an app from this repository's `main` branch with `explorer.py` as the main file, and pick Python 3.13 in the advanced settings if it is offered.
+The live copy at [ecg-beat-explorer.streamlit.app](https://ecg-beat-explorer.streamlit.app) is deployed this way. The repository is set up for it: the checkpoints are committed, recordings download on first use, Linux gets the CPU-only PyTorch build, and the theme and fonts load from `.streamlit/config.toml` and `static/`. On share.streamlit.io, create an app from this repository's `main` branch with `explorer.py` as the main file, and pick Python 3.13 in the advanced settings if it is offered.
 
 The free tier allows roughly 0.7 to 2.7 GB of memory; the explorer used about 0.75 GB locally, and it caches at most 4 recordings at a time. Apps sleep after 12 hours without visitors and wake on the next visit, and each recording takes a few seconds to download the first time it is opened.
 
