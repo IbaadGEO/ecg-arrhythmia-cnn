@@ -2,7 +2,7 @@
 
 <img src="docs/media/banner.svg" width="100%" alt="ECG Arrhythmia CNN: heartbeat classes from a 1D CNN, tested on people it never saw. Behind the title, an ECG trace from MIT-BIH record 200 with each beat labelled N, S or V by the cardiologists' reference annotations.">
 
-<!-- LIVE -->[![Demo videos](https://img.shields.io/badge/demo-videos-56c7b8?style=flat-square&labelColor=161c22)](https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0) ![Python 3.13](https://img.shields.io/badge/Python-3.13-f2c94c?style=flat-square&labelColor=161c22) ![PyTorch 2.14](https://img.shields.io/badge/PyTorch-2.14-f2c94c?style=flat-square&labelColor=161c22) ![Streamlit 1.67](https://img.shields.io/badge/Streamlit-1.67-f2c94c?style=flat-square&labelColor=161c22) [![Data: MIT-BIH, ODC-By 1.0](https://img.shields.io/badge/data-MIT--BIH_ODC--By_1.0-8b949a?style=flat-square&labelColor=161c22)](DATA-LICENCES.md) [![Code: MIT](https://img.shields.io/badge/code-MIT-8b949a?style=flat-square&labelColor=161c22)](LICENSE)
+[![Demo videos](https://img.shields.io/badge/demo-videos-56c7b8?style=flat-square&labelColor=161c22)](https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0) ![Python 3.13](https://img.shields.io/badge/Python-3.13-f2c94c?style=flat-square&labelColor=161c22) ![PyTorch 2.14](https://img.shields.io/badge/PyTorch-2.14-f2c94c?style=flat-square&labelColor=161c22) ![Streamlit 1.67](https://img.shields.io/badge/Streamlit-1.67-f2c94c?style=flat-square&labelColor=161c22) [![Data: MIT-BIH, ODC-By 1.0](https://img.shields.io/badge/data-MIT--BIH_ODC--By_1.0-8b949a?style=flat-square&labelColor=161c22)](DATA-LICENCES.md) [![Code: MIT](https://img.shields.io/badge/code-MIT-8b949a?style=flat-square&labelColor=161c22)](LICENSE)
 
 **[The question](#the-question)** · **[The explorer](#the-explorer)** · **[Inside the model](#inside-the-model)** · **[Results](#results)** · **[v1 against v2](#v1-against-v2)** · **[Run it](#run-it)**
 
@@ -56,7 +56,7 @@
 
 ## The explorer
 
-<!-- LIVE2 -->A Streamlit app that opens any of the 16 saved checkpoints (12 from the current run, 4 from v1) on any recording its model never saw, and shows how the model reaches each answer.
+A Streamlit app that opens any of the 16 saved checkpoints (12 from the current run, 4 from v1) on any recording its model never saw, and shows how the model reaches each answer.
 
 <img src="docs/media/app.jpg" width="100%" alt="The explorer's first screen: a sidebar with checkpoint, recording and alarm threshold; whole-record results tables; a recall and precision against threshold chart; the beat filters">
 
@@ -149,7 +149,7 @@ The explorer and the README graphics use three fonts from `static/fonts/`, each 
 
 ## Run it
 
-<!-- LIVE3 -->The explorer runs from the saved checkpoints with no training. Install, data, hosting, retraining, the demo video and the code layout are below.
+The explorer runs from the saved checkpoints with no training. Install, data, hosting, retraining, the demo video and the code layout are below.
 
 Full walkthrough of the code and protocol: [WALKTHROUGH.md](WALKTHROUGH.md) · v1 baseline and its corrections: [historical/v1/README.md](historical/v1/README.md) · Terms per file: [DATA-LICENCES.md](DATA-LICENCES.md)
 
