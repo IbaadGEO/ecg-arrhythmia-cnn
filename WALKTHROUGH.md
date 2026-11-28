@@ -222,6 +222,8 @@ The title comes from the loaded model, for example "CNN + RR, class-weighted (se
   - ±3 s context and the 504-sample model input.
   - Reference, prediction and alarm for the selected beat, with its model probabilities.
   - RR intervals in seconds and as ratios.
+  - A *Don't get it? See if you get this:* panel with the same result in plain language ([explain.py](ecgcnn/explain.py) `plain_summary`).
+- **How the machine learning works:** a live monitor replaying 20 s around the selected beat, then five steps on that beat (input window, first-layer detectors, the four blocks, the score split into shape, timing and bias, and edited-input sweeps). The numbers come from [explain.py](ecgcnn/explain.py), which a test checks against the model's own output; [live.js](ecgcnn/live.js) only draws them.
 - **Caching:** records, models and probabilities are cached, so moving the slider doesn't rerun the model.
 
 ---
@@ -247,11 +249,11 @@ The title comes from the loaded model, for example "CNN + RR, class-weighted (se
 ## 12. Reproduce
 
 ```bash
-.venv/Scripts/python -m pytest                          # 15 tests
+.venv/Scripts/python -m pytest                          # 28 tests
 .venv/Scripts/python run_experiments.py --out runs/new  # 4 configs × 3 seeds, ~5 min on RTX 3060 Ti
 .venv/Scripts/python summarize.py runs/new
 .venv/Scripts/python demo.py --checkpoint runs/new/checkpoints/<model>.pt --record 200
-.venv/Scripts/streamlit run explorer.py --browser.gatherUsageStats false
+.venv/Scripts/streamlit run explorer.py
 ```
 
 ## 13. Glossary

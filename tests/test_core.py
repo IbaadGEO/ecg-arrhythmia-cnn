@@ -63,6 +63,23 @@ def test_missing_record_files(tmp_path):
         data.load_record(tmp_path, 100)
 
 
+def test_fetch_record_downloads_only_when_missing(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_dl(db, dl_dir, records, annotators):
+        calls.append((db, records, annotators))
+        for ext in ("hea", "dat", "atr"):
+            (Path(dl_dir) / f"{records[0]}.{ext}").write_text("x")
+
+    monkeypatch.setattr(data.wfdb, "dl_database", fake_dl)
+    data.fetch_record(tmp_path / "mitdb", 200)
+    data.fetch_record(tmp_path / "mitdb", 200)  # files now present: no second download
+    assert calls == [("mitdb", ["200"], ["atr"])]  # wfdb adds the version (1.0.0, the only one)
+    monkeypatch.setattr(data.wfdb, "dl_database", lambda *a, **k: None)  # a download that leaves files missing
+    with pytest.raises(FileNotFoundError, match="201.hea"):
+        data.fetch_record(tmp_path / "mitdb", 201)
+
+
 # --- metrics ----------------------------------------------------------------------------------------------------------
 def test_metrics_flag_vs_class_and_undefined():
     y = np.array([0, 0, 1, 2, 2])

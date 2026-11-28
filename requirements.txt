@@ -2,7 +2,11 @@
 # torch: install first from the PyTorch index for GPU, e.g.
 #   pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu126
 # (plain `pip install torch==2.14.1` gives the CPU build)
-torch==2.14.1
+# Linux (including Streamlit Community Cloud) gets the CPU-only build from the PyTorch index; other systems use PyPI.
+# For GPU training on Linux, install the CUDA build first and remove the +cpu line.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1+cpu; sys_platform == "linux"
+torch==2.14.1; sys_platform != "linux"
 numpy==2.5.4
 wfdb==4.3.1
 scikit-learn==1.9.1

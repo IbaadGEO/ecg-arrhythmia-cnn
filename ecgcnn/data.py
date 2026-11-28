@@ -84,6 +84,16 @@ def check_record_files(data_dir, rec):
         raise FileNotFoundError(f"missing {', '.join(missing)} in {data_dir} (download https://physionet.org/content/mitdb/1.0.0/)")
 
 
+def fetch_record(data_dir, rec):
+    """Download one record's header, signal and reference annotations from PhysioNet if any file is missing."""
+    try:
+        check_record_files(data_dir, rec)
+    except FileNotFoundError:
+        Path(data_dir).mkdir(parents=True, exist_ok=True)
+        wfdb.dl_database("mitdb", str(data_dir), records=[str(rec)], annotators=["atr"])
+        check_record_files(data_dir, rec)  # still missing -> raise
+
+
 def load_record(data_dir, rec):
     """Returns dict: X (n, 504) z-scored windows, R (n, 4) RR features, y (n,) class ids, pos (n,) R-peak samples,
     sig (full MLII signal), rec. Beats too close to the recording edges are skipped."""

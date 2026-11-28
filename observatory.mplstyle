@@ -1,0 +1,21 @@
+# Matplotlib style matching .streamlit/config.toml (colours are hex without '#', which starts a comment here)
+figure.facecolor: 161c22
+savefig.facecolor: 161c22
+axes.facecolor: 161c22
+axes.edgecolor: d6dee633
+axes.labelcolor: 8b949a
+axes.titlecolor: e8e4da
+axes.spines.top: False
+axes.spines.right: False
+axes.grid: True
+axes.axisbelow: True
+axes.prop_cycle: cycler('color', ['56c7b8', 'f2c94c', '56b4e9', 'cc79a7'])
+grid.color: d6dee61a
+grid.linewidth: 0.6
+text.color: e8e4da
+xtick.color: 8b949a
+ytick.color: 8b949a
+lines.linewidth: 1.2
+legend.facecolor: 161c22
+legend.edgecolor: 2b333b
+legend.labelcolor: e8e4da

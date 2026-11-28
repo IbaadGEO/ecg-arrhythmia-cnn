@@ -1,0 +1,49 @@
+# Dark "observatory" theme. Fonts are self-hosted from static/fonts (SIL OFL 1.1).
+[server]
+enableStaticServing = true
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "dark"
+primaryColor = "#f2c94c"
+backgroundColor = "#0b0f13"
+secondaryBackgroundColor = "#1b2229"
+textColor = "#e8e4da"
+linkColor = "#56c7b8"
+borderColor = "rgba(214,222,230,0.12)"
+dataframeBorderColor = "rgba(214,222,230,0.12)"
+dataframeHeaderBackgroundColor = "#161c22"
+showWidgetBorder = true
+baseRadius = "4px"
+font = "Manrope, sans-serif"
+headingFont = "Barlow Semi Condensed, sans-serif"
+headingFontWeights = [600, 600, 600, 500, 500, 500]
+codeFont = "JetBrains Mono, monospace"
+codeBackgroundColor = "#161c22"
+chartCategoricalColors = ["#56c7b8", "#f2c94c", "#56b4e9", "#e69f00", "#cc79a7"]
+
+[[theme.fontFaces]]
+family = "Manrope"
+url = "app/static/fonts/manrope-latin-wght-normal.woff2"
+weight = "200 800"
+
+[[theme.fontFaces]]
+family = "Barlow Semi Condensed"
+url = "app/static/fonts/barlow-semi-condensed-latin-500-normal.woff2"
+weight = "500"
+
+[[theme.fontFaces]]
+family = "Barlow Semi Condensed"
+url = "app/static/fonts/barlow-semi-condensed-latin-600-normal.woff2"
+weight = "600"
+
+[[theme.fontFaces]]
+family = "JetBrains Mono"
+url = "app/static/fonts/jetbrains-mono-latin-400-normal.woff2"
+weight = "400"
+
+[theme.sidebar]
+backgroundColor = "#161c22"
+secondaryBackgroundColor = "#1b2229"
