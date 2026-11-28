@@ -11,13 +11,13 @@
 </div>
 
 > [!NOTE]
-> A self-directed learning project covering coding, data, machine learning and geoscience. It is not a professional or commissioned study, and it is **not a medical device**. It uses only published, citable public data: the MIT-BIH Arrhythmia Database and its reference annotations. All results come from code and outputs in this repository, and the first version is kept with its errors documented in [historical/v1](historical/v1/README.md).
+> This is a personal learning project covering coding, data, machine learning and geoscience, not commissioned research or a professional study. It is **not a medical device**. I used published MIT-BIH Arrhythmia Database recordings and reference annotations. The results can be traced to the code and outputs in this repository. I have also kept the original version, including its documented mistakes, in [historical/v1](historical/v1/README.md).
 
 <div align="center">
 
 <img src="docs/media/explorer.webp" width="100%" alt="The explorer's live monitor: an ECG trace from record 200 sweeps across the screen; the model's label appears above each beat once its input is complete, the cardiologists' label sits below, and a side panel shows the latest beat's percentages, the alarm meter and a running tally">
 
-<sub>The explorer's live monitor on record 200, a person the model never saw. Each label appears once the model has the whole window and the next beat. Outlined labels are alarms; the side panel counts correct calls, misses and false alarms as they happen.</sub>
+<sub>The explorer replays record 200, from a subject the model did not train on. A prediction appears only after the full ECG window and following beat are available. Outlined labels show alarms; the panel tracks correct predictions, misses and false alarms.</sub>
 
 </div>
 
@@ -27,19 +27,19 @@
 <tr>
 <td width="50%" valign="top">
 
-**The data.** Each heartbeat on an electrocardiogram (ECG) produces a sharp QRS complex whose peak, the R peak, marks the beat's position. The MIT-BIH Arrhythmia Database holds 48 half-hour, two-channel recordings from 47 subjects studied between 1975 and 1979. Automatic beat labels were reviewed independently by two cardiologists (Moody and Mark, 2001; 2005). AAMI EC57 groups the labels into N, S (supraventricular ectopic), V (ventricular ectopic) and F (fusion) (AAMI, 2012).
+**The data.** An ECG records the heart's electrical activity. Each beat has a QRS complex, with its R peak marking the beat position. The MIT-BIH Arrhythmia Database contains 48 half-hour, two-channel recordings from 47 subjects, collected between 1975 and 1979. Two cardiologists independently reviewed the automatic beat annotations (Moody and Mark, 2001; 2005). Following AAMI EC57, I group them into N, S (supraventricular ectopic), V (ventricular ectopic) and F (fusion) (AAMI, 2012).
 
 </td>
 <td width="50%" valign="top">
 
-**The trap.** About 9 in 10 beats are N, so always answering N scores about 90% accuracy and finds nothing. de Chazal, O'Dwyer and Reilly (2004) split the 44 non-paced recordings into DS1 and DS2 so models are tested on unseen recordings; they reached 75.9% sensitivity and 38.5% positive predictivity for S beats. Records 201 and 202 share a subject (Moody and Mark, 2005), but that split puts them on opposite sides.
+**The problem.** Around 9 in 10 beats belong to N. Predicting N every time therefore gives roughly 90% accuracy without identifying abnormal beats. de Chazal, O'Dwyer and Reilly (2004) divided the 44 non-paced recordings into DS1 and DS2 to test on unseen recordings and reported 75.9% sensitivity and 38.5% positive predictivity for S beats. Their split still places records 201 and 202, which belong to the same subject, on opposite sides (Moody and Mark, 2005).
 
 </td>
 </tr>
 </table>
 
 > [!IMPORTANT]
-> **Does class-weighted cross-entropy raise per-class recall on the rare S, V and F beats, compared with plain cross-entropy, for people the model was not trained on?**
+> **Does class-weighted cross-entropy improve recall for the less common S, V and F beats, compared with standard cross-entropy, when tested on subjects the model has never seen?**
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/media/flow-dark.svg">
@@ -56,7 +56,7 @@
 
 ## The explorer
 
-**[Open it live at ecg-beat-explorer.streamlit.app ↗](https://ecg-beat-explorer.streamlit.app)**, or run it locally (see [Run it](#run-it)). A Streamlit app that opens any of the 16 saved checkpoints (12 from the current run, 4 from v1) on any recording its model never saw, and shows how the model reaches each answer.
+The **[live Streamlit explorer](https://ecg-beat-explorer.streamlit.app)** loads 16 saved checkpoints (12 current, 4 from v1) and recordings from subjects unseen by the selected model. You can inspect each prediction and how it was calculated, or run the app locally (see [Run it](#run-it)).
 
 <img src="docs/media/app.jpg" width="100%" alt="The explorer's first screen: a sidebar with checkpoint, recording and alarm threshold; whole-record results tables; a recall and precision against threshold chart; the beat filters">
 
@@ -66,37 +66,37 @@
 | A threshold | Whole-record tables and a recall and precision against threshold chart. 0.56 is the validated value; anything else is marked exploratory. |
 | A beat filter | All, correct, wrong 4-class guess, alarm with the wrong type, missed abnormal, false alarm, each with its count. A time slider and a counter step through them. |
 | A beat | ±3 s of context with predicted labels above and reference labels below, the 504-sample model input, probabilities, RR intervals in seconds and as ratios. |
-| *Don't get it? See if you get this:* | The same beat in everyday words: a one-line verdict, the experts' label against the model's top guess, and a bar showing how unusual the model rated it against the alarm line. |
+| *A simpler explanation* | The same beat in everyday words: a one-line verdict, the experts' label against the model's top guess, and a bar showing how unusual the model rated it against the alarm line. |
 
 <table>
 <tr>
-<td width="55%" valign="top"><img src="docs/media/threshold.webp" alt="Whole-record tables and the recall and precision against threshold chart updating as the alarm threshold slider moves away from 0.56 and back"><br><b>Moving the alarm threshold.</b> The alarm fires when <i>1 − p(N)</i> reaches the threshold, separately from the 4-class answer. At 0.56 on record 200, 825 of 857 abnormal beats are alarmed and 412 of 1,742 N-group beats raise false alarms (23.7%).</td>
-<td width="45%" valign="top"><img src="docs/media/beat.jpg" alt="A ventricular beat on record 200 that the model missed: the ±3 s context with predicted and reference labels, the 504-sample model input, the beat's reference, prediction and status, the 'Don't get it? See if you get this' panel explaining the miss in everyday words, the class probabilities and the RR intervals"><br><b>A missed V beat, explained twice.</b> The technical readout, then the plain-language panel. It calls the outputs scores, not confidence, because the softmax outputs are not calibrated.</td>
+<td width="55%" valign="top"><img src="docs/media/threshold.webp" alt="Whole-record tables and the recall and precision against threshold chart updating as the alarm threshold slider moves away from 0.56 and back"><br><b>Alarm threshold.</b> The alarm uses <i>1 − p(N)</i> independently of the 4-class prediction. At threshold 0.56 on record 200, it flags 825 of 857 abnormal beats but also 412 of 1,742 N-group beats (23.7% false alarms).</td>
+<td width="45%" valign="top"><img src="docs/media/beat.jpg" alt="A ventricular beat on record 200 that the model missed: the ±3 s context with predicted and reference labels, the 504-sample model input, the beat's reference, prediction and status, the 'A simpler explanation' panel explaining the miss in everyday words, the class probabilities and the RR intervals"><br><b>A missed V beat.</b> The explorer gives both the model's detailed output and a simpler explanation. It uses the word <i>scores</i>, not <i>confidence</i>, because the softmax outputs are not calibrated.</td>
 </tr>
 </table>
 
-The theme is dark, with a faint ECG-paper grid and flat ruled panels. Beat classes use Okabe–Ito colours, which stay distinct for the common forms of colour blindness: N off-white, S sky blue, V orange, F reddish purple. Shape-only checkpoints (no RR features) hide the timing parts of the explanation. The v1 checkpoints have no validation-selected threshold, so they open at 0.50 with a warning that the value is arbitrary.
+The dark interface has a faint ECG-paper grid and simple panels. Class colours use the colour-blind-friendly Okabe–Ito palette: N off-white, S sky blue, V orange and F reddish purple. Models without RR features hide the timing explanations. Because v1 has no validated alarm threshold, those checkpoints default to 0.50 with a warning.
 
 ## Inside the model
 
-The explorer's last section walks through the network on whichever beat is selected. It opens with the live monitor shown above, replaying 20 s around that beat, then five steps, each with an animated diagram drawn from the checkpoint's real weights and activations and a *try it yourself* panel to change the input and watch the answer move.
+The final section explains the selected beat using a 20 s replay and five steps through the network. Each animation uses the checkpoint's actual weights and activations, with controls for editing the input and seeing how the prediction changes.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/media/ml-detector.webp" alt="One first-layer detector sliding along the beat: a box of 7 samples moves left to right, the inset multiplies them by the detector's 7 weights, and the detector's output fills in underneath"><br><b>Pattern detectors.</b> One of the 32 first-layer filters slides along the 504-sample window. The inset shows the 7 samples under it, its 7 learned weights and the output after the learned scaling and ReLU. You can also build a detector from 7 weight sliders and watch it run on the same beat.</td>
-<td width="50%"><img src="docs/media/ml-layers.webp" alt="The beat passing through four layers shown as heatmaps of shrinking width, then collapsing into a strip of 128 averaged values"><br><b>Bigger patterns.</b> The four convolution blocks as heatmaps, each half as long as the one before (504, 252, 126, 63, 31 positions), then averaged into 128 numbers. A slider follows any one of those numbers back to where it responds along the beat and shows how hard it pushes each class.</td>
+<td width="50%"><img src="docs/media/ml-detector.webp" alt="One first-layer detector sliding along the beat: a box of 7 samples moves left to right, the inset multiplies them by the detector's 7 weights, and the detector's output fills in underneath"><br><b>Pattern detectors.</b> You can follow any of the 32 first-layer filters across the 504-sample ECG window. The diagram shows its 7 input samples, 7 learned weights and output after scaling and ReLU. A separate 7-slider example lets you build your own filter.</td>
+<td width="50%"><img src="docs/media/ml-layers.webp" alt="The beat passing through four layers shown as heatmaps of shrinking width, then collapsing into a strip of 128 averaged values"><br><b>Bigger patterns.</b> Heatmaps show the four convolution blocks reducing the input from 504 to 252, 126, 63 and 31 time positions. The final outputs are averaged into 128 features. You can select any one and see where it responds along the beat and how it contributes to each class score.</td>
 </tr>
 <tr>
-<td><img src="docs/media/ml-decision.webp" alt="Each class score built from a shape part, a timing part and a starting point, then converted into percentages and the alarm meter"><br><b>The decision.</b> Each class score is split exactly into a shape part (the 128 numbers), a timing part (the 4 RR features) and a bias, then passed through softmax. Switching either part off shows how much it contributes for this beat. A table gives the exact values.</td>
-<td><img src="docs/media/ml-sweep.webp" alt="A flattened stretch sliding across a missed ventricular beat while a curve below records the model's chance-not-ordinary at each position, against the alarm line"><br><b>What it relies on.</b> A flattened stretch slides across the beat and the curve records the model's answer at each position; on this missed V beat it stays far below the alarm line. A second sweep stretches the gap before the beat from 0.3× to 2× the average, and manual controls do either by hand.</td>
+<td><img src="docs/media/ml-decision.webp" alt="Each class score built from a shape part, a timing part and a starting point, then converted into percentages and the alarm meter"><br><b>The decision.</b> Each class score is broken down into the 128 shape features, 4 RR timing features and a bias before softmax converts it into a percentage. You can remove the shape or timing contribution from the calculation and compare the exact score components in a table.</td>
+<td><img src="docs/media/ml-sweep.webp" alt="A flattened stretch sliding across a missed ventricular beat while a curve below records the model's chance-not-ordinary at each position, against the alarm line"><br><b>What it relies on.</b> The app flattens one section of the ECG at a time and plots how the output changes. In the example of a missed V beat, the abnormal score remains well below the alarm threshold. Another sweep varies the preceding RR interval from 0.3× to 2× the average. You can try both changes manually.</td>
 </tr>
 </table>
 
-The first step, *What goes in*, animates the 1.4 s window being cut out of the recording and rescaled: changing the trace's height or baseline makes no difference after rescaling, while moving the window off the beat does. The edited beats are not real recordings, so they describe this model, not hearts. Every diagram has play and replay buttons and starts paused when the system asks for reduced motion.
+The *What goes in* step shows the 1.4 s window being extracted and normalised. Changes to height and baseline disappear after normalisation, while moving the window changes the input. Edited beats are artificial tests of the model, not evidence about heart behaviour. All diagrams have play and replay controls and respect reduced-motion settings.
 
 ## Results
 
-Strict split, 21 test recordings, 3 seeds. Mean ± sd across seeds, then the 95% patient-cluster bootstrap CI in brackets. Per-class recall (%), 4-class argmax. Every count is in [runs/strict_2026-11-08/summary.md](runs/strict_2026-11-08/summary.md).
+Results use the strict subject-separated split: 21 test recordings and 3 seeds. The table reports mean ± standard deviation across seeds, with 95% patient-cluster bootstrap confidence intervals in brackets. Values are 4-class argmax recall (%) by class. Full counts are in [runs/strict_2026-11-08/summary.md](runs/strict_2026-11-08/summary.md).
 
 | Config | N group | S | V | F |
 |---|---|---|---|---|
@@ -106,26 +106,26 @@ Strict split, 21 test recordings, 3 seeds. Mean ± sd across seeds, then the 95%
 | CNN+RR, weighted | 87.1 ± 3.7 [80.9, 93.1] | 3.4 ± 1.3 [0.6, 16.3] | 85.7 ± 6.4 [71.6, 93.5] | 12.1 ± 20.4 [0.0, 12.9] |
 
 > [!IMPORTANT]
-> **Class weighting did not reliably improve rare-class recall under this protocol.** S recall stayed below 4% on average in every configuration. F recall rose on average, but 9 of the 12 runs scored 5.4% or less and the mean is driven by seed 1. V recall fell by about 7 points with weighting. RR features showed no consistent advantage either.
+> **Class weighting did not consistently improve recall for the rare classes.** Average S recall stayed below 4% in every setup. F recall increased on average, but 9 of 12 runs reached only 5.4% or less, with seed 1 driving the mean. Weighting reduced V recall by around 7 points, and adding RR features gave no consistent improvement.
 
-The validation-selected model (CNN + RR, class-weighted, seed 1, threshold 0.56) alarmed on 3,429 of 5,369 abnormal test beats (63.9%). 3,429 of its 9,097 alarms were real (37.7%), and 5,668 of 42,163 N-group beats raised false alarms (13.4%).
+The model chosen on validation data (CNN + RR, class-weighted, seed 1; threshold 0.56) flagged 3,429 of 5,369 abnormal test beats (63.9%). Of 9,097 alarms, 3,429 were true abnormal beats (37.7%). It falsely flagged 5,668 of 42,163 N-group beats (13.4%).
 
 ## v1 against v2
 
-Both demo excerpts show the same stretch of record 200 (966–974 s). The [v2.0 release](https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0) holds the full videos, recorded before the explorer's current theme.
+Both demos use the same section of record 200 (966–974 s). Full videos are in the [v2.0 release](https://github.com/IbaadGEO/ecg-arrhythmia-cnn/releases/tag/v2.0); they were recorded before the current explorer theme.
 
 <table>
 <tr>
-<td width="50%"><img src="docs/media/demo_v1.webp" alt="v1 demo excerpt: predicted class above each beat, cardiologist label below with a tick or cross"><br><b>v1 demo.</b> CNN + RR, plain loss, trained on all 22 DS1 recordings with one seed and no validation set. Over the whole of record 200 it flags 816 of 857 abnormal beats and 162 of 1,742 N-group beats (9.3%). It does not label false alarms on screen.</td>
-<td width="50%"><img src="docs/media/demo_v2.webp" alt="v2 demo excerpt: each beat labelled correct, false alarm or missed, with running counts"><br><b>v2 demo.</b> The validation-selected model at threshold 0.56. Over the whole recording it alarms on 825 of 857 abnormal beats and on 412 of 1,742 N-group beats (23.7%). Every false alarm and miss is labelled. A single recording is not enough to compare the two protocols.</td>
+<td width="50%"><img src="docs/media/demo_v1.webp" alt="v1 demo excerpt: predicted class above each beat, cardiologist label below with a tick or cross"><br><b>v1 demo.</b> CNN + RR with plain loss, trained on all 22 DS1 recordings with one seed and no validation set. On record 200 it flagged 816 of 857 abnormal beats and 162 of 1,742 N-group beats (9.3%). False alarms were not identified on screen.</td>
+<td width="50%"><img src="docs/media/demo_v2.webp" alt="v2 demo excerpt: each beat labelled correct, false alarm or missed, with running counts"><br><b>v2 demo.</b> The validation-selected model at threshold 0.56 flagged 825 of 857 abnormal beats and 412 of 1,742 N-group beats (23.7%) in record 200. Misses and false alarms are shown. One recording is not enough for a fair comparison between the protocols.</td>
 </tr>
 <tr>
-<td><img src="docs/media/recall_v1.png" alt="v1 per-class recall bar chart for beat-split and patient-split models"><br><b>v1 recall.</b> One seed. The patient split is the conventional DS1/DS2, which shares subject 201/202; the beat split mixes beats from the same patients and overlapping windows.</td>
-<td><img src="docs/media/recall_v2.png" alt="v2 per-class recall bar chart, mean and standard deviation over three seeds"><br><b>v2 recall.</b> Strict split, mean ± sd over 3 seeds. The v1 result "weighting raises V recall from 54% to 91%" does not reappear.</td>
+<td><img src="docs/media/recall_v1.png" alt="v1 per-class recall bar chart for beat-split and patient-split models"><br><b>v1 recall.</b> Results come from one seed. The conventional DS1/DS2 split includes subject overlap between records 201 and 202. The beat-level split also mixes beats from the same patients, including overlapping windows.</td>
+<td><img src="docs/media/recall_v2.png" alt="v2 per-class recall bar chart, mean and standard deviation over three seeds"><br><b>v2 recall.</b> Strict subject-separated split, mean ± standard deviation over 3 seeds. The v1 finding that weighting increased V recall from 54% to 91% did not hold.</td>
 </tr>
 </table>
 
-<sub>ECG and reference labels: MIT-BIH Arrhythmia Database, record 200 (Moody and Mark, 2005), ODC-By 1.0. Excerpts cut from the demo videos and re-encoded as animated WebP at 8 fps. The demo videos come from `demo.py`, which keeps its own video layout.</sub>
+<sub>ECG signals and reference labels come from MIT-BIH record 200 (Moody and Mark, 2005), under ODC-By 1.0. The excerpts were taken from `demo.py` videos and converted to animated WebP at 8 fps. `demo.py` retains its own video layout.</sub>
 
 ## Where each part comes from
 
@@ -143,22 +143,22 @@ Both demo excerpts show the same stretch of record 200 (966–974 s). The [v2.0 
 | Confidence intervals | Estimated (patient-cluster bootstrap) | this project |
 | Alarm threshold 0.56 and the selected model | Chosen on validation recordings | this project |
 
-Every ECG trace and reference label shown here, including the banner, comes from the MIT-BIH Arrhythmia Database (Moody and Mark, 2005), under the Open Data Commons Attribution License v1.0. The recordings themselves are not included; they download from PhysioNet. The README media are screen recordings of this project's explorer, excerpts of its demo videos and its own plots and diagrams, cropped, resized, re-timed and re-encoded as WebP, JPEG, PNG and SVG. No other authors' figures or outputs are reproduced.
+All ECG signals and reference labels, including those in the banner, are from the MIT-BIH Arrhythmia Database (Moody and Mark, 2005), licensed under Open Data Commons Attribution License v1.0. Recordings are not bundled and are downloaded from PhysioNet. README media consist of this project's explorer recordings, demo excerpts, plots and diagrams, edited and exported as WebP, JPEG, PNG and SVG. No figures or outputs from other authors are reproduced.
 
-The explorer and the README graphics use three fonts from `static/fonts/`, each under the SIL Open Font License 1.1 with its licence file alongside: [Manrope](https://github.com/sharanda/manrope) by The Manrope Project Authors, [Barlow Semi Condensed](https://github.com/jpt/barlow) by The Barlow Project Authors, and [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) by The JetBrains Mono Project Authors. The banner and figures strip embed Barlow Semi Condensed and JetBrains Mono.
+Fonts are stored in `static/fonts/`, each with its SIL Open Font License 1.1 file: [Manrope](https://github.com/sharanda/manrope) (The Manrope Project Authors), [Barlow Semi Condensed](https://github.com/jpt/barlow) (The Barlow Project Authors) and [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) (The JetBrains Mono Project Authors). The banner and figures strip embed Barlow Semi Condensed and JetBrains Mono.
 
 ## Run it
 
-The explorer runs from the saved checkpoints with no training, and is hosted at [ecg-beat-explorer.streamlit.app](https://ecg-beat-explorer.streamlit.app). Install, data, hosting, retraining, the demo video and the code layout are below.
+The [live explorer](https://ecg-beat-explorer.streamlit.app) loads saved checkpoints without retraining. The instructions below cover installation, local use, hosting, retraining, demo videos and the code layout.
 
-Full walkthrough of the code and protocol: [WALKTHROUGH.md](WALKTHROUGH.md) · v1 baseline and its corrections: [historical/v1/README.md](historical/v1/README.md) · Terms per file: [DATA-LICENCES.md](DATA-LICENCES.md)
+Code and protocol: [WALKTHROUGH.md](WALKTHROUGH.md) · v1 results and corrections: [historical/v1/README.md](historical/v1/README.md) · File licences: [DATA-LICENCES.md](DATA-LICENCES.md)
 
 <details>
 <summary><b>Install, run, retrain, render</b></summary>
 
 ### Install
 
-Tested on Windows 11 with Python 3.13.7 and an RTX 3060 Ti. Versions are pinned in `requirements.txt`. On Linux it installs the CPU-only PyTorch build; for GPU training on Linux, install the CUDA build first and remove the `+cpu` line.
+I tested this on Windows 11 with Python 3.13.7 and an RTX 3060 Ti. Dependencies are pinned in `requirements.txt`. Linux installs CPU-only PyTorch by default. For Linux GPU training, install the CUDA build first and remove the `+cpu` line.
 
 ```bash
 python -m venv .venv
@@ -166,23 +166,23 @@ python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt
 ```
 
-Training needs the whole MIT-BIH Arrhythmia Database v1.0.0: download it from https://physionet.org/content/mitdb/1.0.0/ and unzip it so the record files sit in `data/mitdb/` (for example `data/mitdb/100.hea`, `100.dat`, `100.atr`). The explorer does not need this step. When a recording it is asked for is missing, it downloads that recording's three files (about 2 MB) from PhysioNet into the same folder.
+Training requires the complete [MIT-BIH Arrhythmia Database v1.0.0](https://physionet.org/content/mitdb/1.0.0/). Extract it to `data/mitdb/`, with files such as `data/mitdb/100.hea`, `100.dat` and `100.atr`. For the explorer, this download is optional: missing records are fetched from PhysioNet on demand (three files, about 2 MB per record).
 
 ### Explore the saved models (no training needed)
 
-Run from the repository root, so Streamlit finds `.streamlit/config.toml` (theme, fonts, usage statistics off):
+Run this from the repository root so Streamlit loads `.streamlit/config.toml` (theme, fonts and usage statistics disabled):
 
 ```bash
 .venv/Scripts/streamlit run explorer.py
 ```
 
-After editing files in `ecgcnn/`, restart the server; Streamlit keeps the imported package in memory.
+Restart Streamlit after changing `ecgcnn/` files, as imported modules remain in memory.
 
 ### Host the explorer on Streamlit Community Cloud (free)
 
-The live copy at [ecg-beat-explorer.streamlit.app](https://ecg-beat-explorer.streamlit.app) is deployed this way. The repository is set up for it: the checkpoints are committed, recordings download on first use, Linux gets the CPU-only PyTorch build, and the theme and fonts load from `.streamlit/config.toml` and `static/`. On share.streamlit.io, create an app from this repository's `main` branch with `explorer.py` as the main file, and pick Python 3.13 in the advanced settings if it is offered.
+The live app uses Streamlit Community Cloud. Saved checkpoints are included in the repository; missing recordings download on first use; Linux uses CPU-only PyTorch; and theme files load from `.streamlit/config.toml` and `static/`. To host it yourself, create an app at share.streamlit.io from the `main` branch, choose `explorer.py` and select Python 3.13 if available.
 
-The free tier allows roughly 0.7 to 2.7 GB of memory; the explorer used about 0.75 GB locally, and it caches at most 4 recordings at a time. Apps sleep after 12 hours without visitors and wake on the next visit, and each recording takes a few seconds to download the first time it is opened.
+The free tier provides roughly 0.7–2.7 GB RAM. The explorer used about 0.75 GB locally and caches up to 4 recordings. Apps sleep after 12 hours without visitors and resume on the next visit. A new recording takes a few seconds to download.
 
 ### Retrain and evaluate
 
@@ -192,11 +192,11 @@ The free tier allows roughly 0.7 to 2.7 GB of memory; the explorer used about 0.
 .venv/Scripts/python summarize.py runs/my_run                   # writes runs/my_run/summary.md
 ```
 
-`run_experiments.py` refuses to overwrite an existing run directory. Each run records its records per partition, seeds, hyperparameters and software versions in `config.json`. CUDA training is seeded and set to deterministic mode where PyTorch allows it; some kernels remain nondeterministic, so reruns can differ slightly.
+`run_experiments.py` will not overwrite an existing run. Each run saves partition membership, seeds, hyperparameters and software versions to `config.json`. CUDA training is seeded and deterministic where supported, but some PyTorch kernels can still produce small differences between runs.
 
 ### Render a demo video
 
-Needs `ffmpeg` on PATH. The script refuses any recording whose subject the checkpoint saw in training or validation.
+Requires `ffmpeg` on PATH. The script rejects recordings from subjects present in the checkpoint's training or validation data.
 
 ```bash
 .venv/Scripts/python demo.py --checkpoint runs/strict_2026-11-08/checkpoints/cnn+rr_weighted_seed1.pt --record 200
@@ -219,13 +219,13 @@ Needs `ffmpeg` on PATH. The script refuses any recording whose subject the check
 
 ### Limitations
 
-- Beat positions come from the reference annotations; there is no beat detector.
-- RR features use the next beat and the whole-recording mean, so the pipeline is offline only.
-- The AAMI N group includes bundle branch block and escape beats, so it is broader than normal sinus rhythm.
-- The validation partition is small and fixed (30 F beats). There is no cross-validation.
-- Test classes are concentrated: record 232 holds 1,382 of 1,782 S beats, and record 213 holds 362 of 387 F beats.
-- DS2 results had been inspected during v1, so DS2 is not an untouched holdout.
-- The explorer's edited-input experiments (flattening, shifting, re-timing) probe one checkpoint on inputs it never trained on. They show what that model responds to, not how hearts behave.
+- Beat locations use reference annotations. The project does not detect beats independently.
+- RR features depend on the next beat and whole-recording mean, so classification is offline only.
+- The AAMI N group also contains bundle branch block and escape beats. It is not equivalent to normal sinus rhythm.
+- Validation uses one small, fixed partition containing 30 F beats. There is no cross-validation.
+- Rare classes are concentrated in a few test records: record 232 contains 1,382 of 1,782 S beats, while record 213 contains 362 of 387 F beats.
+- DS2 was already examined during v1, so it cannot be treated as a completely untouched test set.
+- Flattening, shifting and re-timing experiments test one checkpoint using artificial inputs outside its training data. They show what influences the model, not how a heart behaves.
 
 
 </details>
@@ -233,12 +233,12 @@ Needs `ffmpeg` on PATH. The script refuses any recording whose subject the check
 <details>
 <summary><b>Built with</b></summary>
 
-- Model and training: Python 3.13, PyTorch 2.14 (CUDA 12.6), NumPy, and scikit-learn for class weights.
-- Data access: wfdb 4.3.1 reads the PhysioNet records and annotations.
-- Evaluation and plots: the project's own confusion-matrix metrics and patient bootstrap, and matplotlib with a shared dark style (`observatory.mplstyle`).
-- Explorer: Streamlit 1.67, themed through `.streamlit/config.toml`. The live diagrams are plain canvas JavaScript (`ecgcnn/live.js`) mounted with `st.components.v2`, so they render in the page and use the same fonts.
-- Demo video: matplotlib with ffmpeg. The README media were recorded with Playwright (headless Chromium) and assembled with Pillow; the banner and figures strip are SVG drawn from record 200.
-- Tests: 28 pytest tests covering subject separation, label mapping, RR features, metrics, checkpoint loading, on-demand record download and the explorer's model explanations (for example, that the shape, timing and bias parts add up to the model's own scores).
+- Model and training: Python 3.13, PyTorch 2.14 (CUDA 12.6), NumPy and scikit-learn for class weights.
+- Data: wfdb 4.3.1 reads PhysioNet ECG recordings and annotations.
+- Evaluation and plots: project-specific confusion-matrix metrics and patient bootstrap, with matplotlib using `observatory.mplstyle`.
+- Explorer: Streamlit 1.67 with `.streamlit/config.toml`. The animations use canvas JavaScript (`ecgcnn/live.js`) through `st.components.v2`, embedded in the page with the same fonts.
+- Video and images: matplotlib and ffmpeg for demos; Playwright (headless Chromium) and Pillow for README captures; SVG banner and figures strip drawn from record 200.
+- Tests: 28 pytest tests for subject separation, labels, RR features, metrics, checkpoint loading, on-demand downloads and explanation calculations, including the exact sum of shape, timing and bias scores.
 
 </details>
 
@@ -264,10 +264,10 @@ Needs `ffmpeg` on PATH. The script refuses any recording whose subject the check
 - Pedregosa, F. et al. (2011) 'Scikit-learn: machine learning in Python', *Journal of Machine Learning Research*, 12(85), pp. 2825–2830.
 - Xie, C., McCullum, L., Johnson, A., Pollard, T., Gow, B. and Moody, B. (2023) *Waveform Database Software Package (WFDB) for Python* (version 4.1.0). PhysioNet. doi:10.13026/9njx-6322. (Version 4.3.1 from PyPI was used.)
 
-Accessed 9 November 2026. Kachuee, Fazeli and Sarrafzadeh (2018) is the source of the pre-segmented Kaggle version of MIT-BIH. It was not used here because its rows hold 187 samples and a label but no record identifier, so it cannot be split by patient.
+Accessed 9 November 2026. Kachuee, Fazeli and Sarrafzadeh (2018) provided the pre-segmented Kaggle MIT-BIH dataset. I did not use it because each row has 187 samples and a label but no recording ID, making a patient-separated split impossible.
 
 </details>
 
 ## Licence
 
-Code: [MIT](LICENSE). Fonts in `static/fonts/`: SIL Open Font License 1.1. The ECG data and reference labels keep the MIT-BIH Arrhythmia Database's terms (Open Data Commons Attribution License v1.0); see [DATA-LICENCES.md](DATA-LICENCES.md). The animations and images in `docs/media/` are recordings and excerpts of this project's outputs that show MIT-BIH data, shared under the same attribution terms.
+Code: [MIT](LICENSE). Fonts in `static/fonts/`: SIL Open Font License 1.1. MIT-BIH signals and annotations remain under Open Data Commons Attribution License v1.0; see [DATA-LICENCES.md](DATA-LICENCES.md). Animations and images in `docs/media/` show MIT-BIH data from this project's outputs and follow the same attribution terms.

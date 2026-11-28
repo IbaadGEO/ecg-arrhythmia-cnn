@@ -32,9 +32,9 @@ def test_with_pre_rr_keeps_features_consistent():
 
 
 @pytest.mark.parametrize("ref,pred,p_abn,status,head,did", [
-    (0, 0, 0.1, 0, "got this beat right", "did not"),
-    (0, 1, 0.4, 0, "Right call: no alarm", "did not"),
-    (2, 1, 0.9, 1, "wrong kind of beat", "did"),
+    (0, 0, 0.1, 0, "classified this beat correctly", "did not"),
+    (0, 1, 0.4, 0, "No alarm was needed", "did not"),
+    (2, 1, 0.9, 1, "chose the wrong class", "did"),
     (2, 0, 0.2, 2, "Missed", "did not"),
     (0, 2, 0.8, 3, "False alarm", "did"),
 ])
@@ -42,7 +42,7 @@ def test_plain_summary_matches_status(ref, pred, p_abn, status, head, did):
     h, lines = explain.plain_summary(ref, pred, 0.7, p_abn, 0.5, status)
     assert head in h
     assert lines[0].endswith(f"**{explain.PLAIN[ref]}**.") and f"**{explain.PLAIN[pred]}**" in lines[1]
-    assert f"**{did}** raise one" in lines[2]
+    assert f"**{did}** trigger" in lines[2]
 
 
 def test_window_matches_loader_and_ignores_height_and_baseline():

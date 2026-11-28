@@ -222,7 +222,7 @@ The title comes from the loaded model, for example "CNN + RR, class-weighted (se
   - ±3 s context and the 504-sample model input.
   - Reference, prediction and alarm for the selected beat, with its model probabilities.
   - RR intervals in seconds and as ratios.
-  - A *Don't get it? See if you get this:* panel with the same result in plain language ([explain.py](ecgcnn/explain.py) `plain_summary`).
+  - The *A simpler explanation* panel with the same result in plain language ([explain.py](ecgcnn/explain.py) `plain_summary`).
 - **How the machine learning works:** a live monitor replaying 20 s around the selected beat, then five steps on that beat (input window, first-layer detectors, the four blocks, the score split into shape, timing and bias, and edited-input sweeps). The numbers come from [explain.py](ecgcnn/explain.py), which a test checks against the model's own output; [live.js](ecgcnn/live.js) only draws them.
 - **Caching:** records, models and probabilities are cached, so moving the slider doesn't rerun the model.
 

@@ -108,11 +108,11 @@ def checkpoints():
 
 
 st.title("ECG beat explorer")
-st.caption("MIT-BIH Arrhythmia Database · offline classification at expert-annotated beat locations · "
+st.caption("MIT-BIH Arrhythmia Database · offline classification at expert-annotated beat positions · "
            "research demo, not a medical device")
 
 with st.sidebar:
-    data_dir = str(ROOT / st.text_input("MIT-BIH folder (relative to the project, or absolute)", "data/mitdb"))
+    data_dir = str(ROOT / st.text_input("MIT-BIH data folder (relative or absolute path)", "data/mitdb"))
     cks = checkpoints()
     if not cks:
         st.error("No checkpoints found under runs/*/checkpoints or historical/v1/results."); st.stop()
@@ -123,26 +123,26 @@ with st.sidebar:
     st.caption(f"Split: {meta['split']}")
     recs = eligible_records(meta)  # missing files are fetched from PhysioNet on first use
     if not recs:
-        st.error("No recording is eligible for this model."); st.stop()
-    rec = st.selectbox("Recording (subject never seen by this model)", recs,
+        st.error("No eligible recording for this model."); st.stop()
+    rec = st.selectbox("Recording (unseen subject)", recs,
                        index=recs.index(200) if 200 in recs else 0)
 
     st.subheader("Abnormal alarm")
-    st.caption("p_abnormal = 1 − p(N). The alarm is separate from the 4-class argmax prediction.")
+    st.caption("`p_abnormal = 1 − p(N)`. This alarm is separate from the 4-class argmax prediction.")
     val_thr = meta.get("alarm_threshold")
     default = val_thr if val_thr is not None else 0.5
     thr = st.slider("Alarm threshold", 0.01, 0.99, float(default), 0.01)
     if val_thr is not None:
         st.write(f"Validation-selected threshold: **{val_thr:.2f}** ({meta.get('alarm_threshold_source')})")
     else:
-        st.warning("This legacy checkpoint has no validation-selected threshold; 0.50 is an arbitrary default.")
+        st.warning("This v1 checkpoint has no validation-selected threshold. The default 0.50 is arbitrary.")
     exploratory = val_thr is None or abs(thr - val_thr) > 1e-9
     if exploratory:
-        st.warning("Exploratory: this threshold was set by hand while looking at test data. "
-                   "Results at it are not a validated estimate.")
+        st.warning("Exploratory threshold, chosen while viewing test data. "
+                   "Results at this setting are not validated estimates.")
 
 try:
-    with st.spinner(f"Loading record {rec} (downloaded from PhysioNet the first time)…"):
+    with st.spinner(f"Loading record {rec} (downloaded from PhysioNet on first use)…"):
         data.fetch_record(data_dir, rec)
         d = get_record(data_dir, rec)
 except Exception as e:  # network or file problems: say what failed instead of a traceback
@@ -158,7 +158,7 @@ st.header(f"Record {rec}: whole-recording results")
 m = metrics.from_confusion(metrics.confusion(y, pred))
 c1, c2 = st.columns(2)
 with c1:
-    st.markdown("**Exact class (4-class argmax)**: is the beat's AAMI class right?")
+    st.markdown("**Exact class (4-class argmax):** did the model predict the correct AAMI class?")
     st.dataframe(pd.DataFrame({
         "class": data.CLASS_NAMES,
         "reference beats": [m["counts"]["support"][c] for c in data.CLASSES],
@@ -166,9 +166,9 @@ with c1:
         "recall": [None if m[f"recall_{c}"] is None else round(m[f"recall_{c}"], 3) for c in data.CLASSES],
         "precision": [None if m[f"precision_{c}"] is None else round(m[f"precision_{c}"], 3) for c in data.CLASSES]}),
         hide_index=True)
-    st.caption("Empty cells = undefined (class absent, or never predicted), not zero.")
+    st.caption("Blank cells mean the value is undefined because the class is absent or never predicted. They do not mean zero.")
 with c2:
-    st.markdown("**Abnormal alarm**: was an S/V/F beat flagged as *some* abnormality?")
+    st.markdown("**Abnormal alarm:** did the model flag an S/V/F beat as abnormal, even if it got the class wrong?")
     fl = metrics.flag_metrics(y, p_abn, thr)
     rows = [("threshold", f"{thr:.2f}" + (" (exploratory)" if exploratory else " (validation-selected)"))]
     rows += [("abnormal beats alarmed", f"{fl['tp']} / {fl['abnormal']}" + (f" ({fl['recall']:.1%})" if fl['recall'] is not None else "")),
@@ -186,7 +186,7 @@ with c2:
     ax.plot(grid, [c["precision"] if c["precision"] is not None else np.nan for c in curve], label="alarm precision")
     ax.axvline(thr, color=TEXT, ls=":", lw=1, label="current")
     if val_thr is not None: ax.axvline(val_thr, color=GOLD, ls="--", lw=1, label="validation-selected")
-    ax.set_xlabel("threshold on p_abnormal"); ax.set_ylim(0, 1.02); ax.legend(fontsize=7); ax.set_title(f"Record {rec} (test data: exploratory)", fontsize=9)
+    ax.set_xlabel("p_abnormal threshold"); ax.set_ylim(0, 1.02); ax.legend(fontsize=7); ax.set_title(f"Record {rec} (test data: exploratory)", fontsize=9)
     fig.tight_layout(); st.pyplot(fig); plt.close(fig)
 
 # ---- beat navigation ----------------------------------------------------------------------------------------------
@@ -206,7 +206,7 @@ if not len(idx):
 with f2:
     jump = st.slider("Jump to time (minutes)", 0.0, round(len(sig) / fs / 60, 2), 0.0, 0.05)
     start = int(np.searchsorted(pos[idx], jump * 60 * fs))
-    k = st.number_input(f"Beat {len(idx)} matching; step with ±", 0, len(idx) - 1, min(start, len(idx) - 1))
+    k = st.number_input(f"{len(idx)} matching beats; use ± to move between them", 0, len(idx) - 1, min(start, len(idx) - 1))
 i = int(idx[k])
 t = pos[i] / fs
 
@@ -222,13 +222,13 @@ with left:
         ax.text(pos[j] / fs, lo_y - 0.35, data.CLASSES[y[j]], ha="center", color=TEXT)
     ax.axvspan((pos[i] - data.HALF) / fs, (pos[i] + data.HALF) / fs, color=GOLD, alpha=0.15, label="model input window")
     ax.set_ylim(lo_y - 0.6, hi_y + 0.6); ax.set_xlabel("seconds"); ax.set_yticks([])
-    ax.set_title("±3 s around the selected beat · top: argmax prediction (outlined = alarm) · bottom: reference", fontsize=9)
+    ax.set_title("±3 s around this beat · predictions above (outlined = alarm), reference below", fontsize=9)
     ax.legend(loc="lower right", fontsize=7); fig.tight_layout(); st.pyplot(fig); plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(9, 2.2))
     ax.plot(np.arange(-data.HALF, data.HALF) / fs, d["X"][i], color=TEAL, lw=1)
     ax.axvline(0, color=GOLD); ax.set_xlabel("seconds from R peak"); ax.set_yticks([])
-    ax.set_title("Model input: 504-sample window, z-score normalised", fontsize=9)
+    ax.set_title("Model input: 504-sample, z-score-normalised window", fontsize=9)
     fig.tight_layout(); st.pyplot(fig); plt.close(fig)
 
 with right:
@@ -237,19 +237,18 @@ with right:
                 f"Predicted (argmax): **{data.CLASS_NAMES[pred[i]]} ({data.CLASSES[pred[i]]})**  \n"
                 f"Alarm: **{'yes' if alarm[i] else 'no'}** (p_abnormal {p_abn[i]:.3f} vs threshold {thr:.2f})  \n"
                 f"Status: **{STATUS[status[i]]}**")
-    with st.expander("Don't get it? See if you get this:"):
+    with st.expander("A simpler explanation"):
         head, lines = explain.plain_summary(y[i], pred[i], probs[i][pred[i]], p_abn[i], thr, status[i])
         st.markdown(f"#### {head}")
         st.markdown("\n".join(f"- {line}" for line in lines))
-        st.progress(float(p_abn[i]), text=f"How unusual the computer thought this beat was: {p_abn[i]:.0%} "
-                                          f"(alarm at {thr:.0%})")
-        st.caption("In the trace on the left, the letters on top are the computer's guesses and the letters underneath "
-                   "are the experts' labels. The shaded band is the stretch of signal the computer looked at. "
-                   "Scores are the model's own numbers, not a medical certainty.")
+        st.progress(float(p_abn[i]), text=f"Model abnormal score: {p_abn[i]:.0%} "
+                                          f"(alarm threshold {thr:.0%})")
+        st.caption("In the trace, model predictions are above each beat and the cardiologists' labels are below. "
+                   "The shaded area shows the input window. These are model scores, not medical certainty.")
     st.markdown("Model probabilities (softmax outputs, not calibrated confidence):")
     st.bar_chart(pd.DataFrame({"probability": probs[i]}, index=data.CLASS_NAMES), horizontal=True, height=180)
     R = d["R"][i]
-    st.markdown("RR intervals (uses the next beat and the whole-recording mean, so offline only):")
+    st.markdown("RR intervals (include the next beat and the recording mean, so this is offline only):")
     st.table(pd.DataFrame({
         "interval": ["previous RR", "next RR", "mean of last 10 RR", "recording mean RR", "previous / next"],
         "seconds": [f"{R[0] * d['rr_mean'] / fs:.3f}", f"{R[1] * d['rr_mean'] / fs:.3f}",
@@ -258,9 +257,9 @@ with right:
 
 # ---- how the machine learning works --------------------------------------------------------------------------------
 st.header("How the machine learning works")
-st.markdown(f"Everything below uses the beat you selected above (beat at {int(t // 60)}:{t % 60:05.2f}) and the real "
-            f"model, a **{describe(meta)}**. The moving diagrams are drawn from the model's actual numbers. "
-            "Nothing here is a mock-up.")
+st.markdown(f"The examples below use your selected beat ({int(t // 60)}:{t % 60:05.2f}) and checkpoint, "
+            f"**{describe(meta)}**. All diagrams use the model's real weights, outputs and calculations, "
+            "not simulated results.")
 x0, r0 = d["X"][i], d["R"][i]
 sec = np.arange(-data.HALF, data.HALF) / fs
 parts = explain.score_parts(model, x0, r0)
@@ -276,18 +275,16 @@ def verdict(p_old, p_new):
 
 
 st.subheader("Watch it work")
-st.markdown("The model reading 20 seconds of this recording as if it were live. A label appears on top as soon as the "
-            "model has everything it needs for that beat"
-            + (" (the full window and the next beat, because it uses the gap after the beat)" if model.n_rr else
-               " (the full window)")
-            + ", and the experts' label sits underneath. The panel on the right shows its percentages for the latest "
-            "beat and keeps a running tally.")
+st.markdown("This replays 20 seconds of the recording as though the model were reading it live. "
+            + ("Each prediction appears once the full window and next beat are available, since the model uses the "
+               "following RR interval." if model.n_rr else "Each prediction appears once the full window is available.")
+            + " Reference labels appear below, with the latest softmax percentages and running totals on the right.")
 a_s = max(0, int(pos[i] - 5 * fs)); b_s = min(len(sig), a_s + 20 * fs)
 ready = pos + data.HALF
 if model.n_rr:
     ready = np.maximum(ready, np.r_[pos[1:], pos[-1]])
 seg = sig[a_s:b_s]
-live("monitor", "monitor", 320, "Live: the model reading the recording beat by beat",
+live("monitor", "monitor", 320, "Replay: beat-by-beat predictions",
      alt="Animated ECG trace with the model's beat labels appearing in real time", sig=seg[::2], fs=fs / 2,
      dur=(b_s - a_s) / fs, lo=float(np.percentile(seg, 0.5)) - 0.2, hi=float(np.percentile(seg, 99.5)) + 0.2,
      thr=thr, classes=data.CLASSES, names=data.CLASS_NAMES,
@@ -296,71 +293,70 @@ live("monitor", "monitor", 320, "Live: the model reading the recording beat by b
              "probs": np.round(probs[j], 3).tolist()} for j in np.where((pos >= a_s) & (pos < b_s))[0]])
 
 st.subheader("1 · What goes in")
-st.markdown(f"The model never sees the whole recording. It gets **{2 * data.HALF} measurements** (1.4 seconds) centred on "
-            "one heartbeat, rescaled so that only the *shape* of the trace matters, not how tall it is or where it sits."
-            + (" It also gets **4 timing numbers**: how long the gaps before and after this beat were, compared with "
-               "this person's average." if model.n_rr else " This model uses the shape only, with no timing numbers."))
+st.markdown(f"For each beat, the model takes {2 * data.HALF} ECG samples (1.4 seconds) centred on the R peak, rather "
+            "than the full recording. Z-score normalisation removes the trace's height and baseline."
+            + (" Four RR features describe beat timing, including gaps before and after the beat relative to the "
+               "person's average." if model.n_rr else " This model uses the ECG shape only, with no RR features."))
 c_lo = max(0, int(pos[i] - 2 * fs)); raw = sig[c_lo:min(len(sig), int(pos[i] + 2 * fs))]
 live("input", "input", 230, "Cutting out the window and rescaling it", raw=raw, x=x0,
      win=[int(pos[i] - data.HALF - c_lo), int(pos[i] + data.HALF - 1 - c_lo)])
-with st.expander("Try it yourself: change the height, baseline or centring", expanded=True):
+with st.expander("Try changing the height, baseline or centre", expanded=True):
     t1, t2, t3 = st.columns(3)
-    gain = t1.slider("Make the trace taller or shorter (×)", 0.25, 4.0, 1.0, 0.05)
-    offset = t2.slider("Move the baseline up or down (mV)", -2.0, 2.0, 0.0, 0.05)
-    shift = t3.slider("Centre the window off the beat (ms)", -200, 200, 0, 5)
+    gain = t1.slider("Trace height (×)", 0.25, 4.0, 1.0, 0.05)
+    offset = t2.slider("Baseline shift (mV)", -2.0, 2.0, 0.0, 0.05)
+    shift = t3.slider("Shift window centre (ms)", -200, 200, 0, 5)
     try:
         x_try = explain.window(sig, int(pos[i] + round(shift * fs / 1000)), gain, offset)
     except ValueError:
-        st.warning("That shift runs past the edge of the recording."); x_try = x0
+        st.warning("This shift extends beyond the recording."); x_try = x0
     c1, c2 = st.columns(2)
     with c1:
         fig, ax = plt.subplots(figsize=(6, 2.2))
         w0 = sig[pos[i] - data.HALF:pos[i] + data.HALF]
         ax.plot(sec, w0, color=TEXT, lw=0.8, alpha=0.4, label="recorded")
-        ax.plot(sec, w0 * gain + offset, color=GOLD, lw=1, label="after your change")
+        ax.plot(sec, w0 * gain + offset, color=GOLD, lw=1, label="changed")
         ax.set_ylabel("mV", fontsize=8); ax.set_xlabel("seconds"); ax.legend(fontsize=7, loc="upper right")
-        ax.set_title("What you changed (millivolts)", fontsize=9); fig.tight_layout(); st.pyplot(fig); plt.close(fig)
+        ax.set_title("ECG before and after your change (millivolts)", fontsize=9); fig.tight_layout(); st.pyplot(fig); plt.close(fig)
     with c2:
         fig, ax = plt.subplots(figsize=(6, 2.2))
         ax.plot(sec, x0, color=TEXT, lw=0.8, alpha=0.4, label="original input")
-        ax.plot(sec, x_try, color=TEAL, lw=1, label="what the model gets now")
+        ax.plot(sec, x_try, color=TEAL, lw=1, label="changed input")
         ax.set_yticks([]); ax.set_xlabel("seconds"); ax.legend(fontsize=7, loc="upper right")
-        ax.set_title("What the model receives after rescaling", fontsize=9); fig.tight_layout(); st.pyplot(fig)
+        ax.set_title("Input after normalisation", fontsize=9); fig.tight_layout(); st.pyplot(fig)
         plt.close(fig)
     st.markdown(verdict(parts["probs"], explain.score_parts(model, x_try, r0)["probs"]))
-    st.caption("Height and baseline disappear in the rescaling, so they change nothing. Moving the window does change "
-               "the input: the model learned from beats centred on their main spike.")
+    st.caption("Normalisation removes height and baseline changes, so the prediction stays the same. Shifting the "
+               "window changes the input because training beats were centred on their main spike.")
 
 st.subheader("2 · Pattern detectors")
 act = explain.first_layer(model, x0)
-st.markdown("The first layer is a set of **32 small pattern detectors**, each only 7 measurements wide (about 0.02 s). "
-            "Each one slides along the trace, multiplies the 7 measurements under it by its 7 weights and adds them up. "
-            "The result is large where the trace matches the detector's pattern: a steep rise, a sharp peak, a slow dip. "
-            "Nobody wrote these weights by hand. They were learned from the training recordings by repeatedly "
-            "nudging them to make fewer mistakes.")
-k1 = st.slider("Pick a detector (it starts on the one that lights up most for this beat)", 1, 32,
+st.markdown("The first layer has 32 learned detectors, each covering 7 samples (about 0.02 s). As a detector moves "
+            "across the ECG, it multiplies those 7 samples by its 7 weights and adds the results. Strong responses show "
+            "where the signal matches patterns such as a steep rise, sharp peak or gradual dip. The weights were "
+            "learned during training rather than set manually.")
+k1 = st.slider("Choose a detector (starts with the strongest response for this beat)", 1, 32,
                int(act[:, 3:-3].max(1).argmax()) + 1)  # skip the zero-padded edges
 live("conv", "conv", 250, f"Detector {k1} of 32 sliding along the beat", x=x0, act=act[k1 - 1], fs=fs, bn=True,
      w=model.cnn[0][0].weight[k1 - 1, 0].detach().numpy())
 PRESETS = {"Sharp peak": [-1, -1, 0, 4, 0, -1, -1], "Upward slope": [-1, -1, -1, 0, 1, 1, 1],
            "Downward slope": [1, 1, 1, 0, -1, -1, -1], "Dip": [1, 1, 0, -4, 0, 1, 1]}
-with st.expander("Try it yourself: design your own detector", expanded=True):
+with st.expander("Build your own detector", expanded=True):
     preset = st.selectbox("Start from", list(PRESETS))
     wcols = st.columns(7)
     mine = np.array([wcols[j].slider(f"w{j + 1}", -4.0, 4.0, float(v), 0.5, key=f"w{j}_{preset}")
                      for j, v in enumerate(PRESETS[preset])])
-    live("mine", "conv", 250, "Your detector on this beat (a plain multiply-and-add, then negatives set to 0)",
+    live("mine", "conv", 250, "Your detector: multiply, add and set negative values to 0",
          x=x0, act=explain.my_detector(x0, mine), fs=fs, bn=False, w=mine)
-    st.caption("Your detector is not part of the model. It works the same way as the model's first layer, without "
-               "the learned scaling step.")
+    st.caption("This is a separate example, not a model filter. It uses the same multiplication and addition, "
+               "but without the learned scaling.")
 
 st.subheader("3 · Building bigger patterns")
 blocks = explain.block_outputs(model, x0)
-st.markdown("Three more layers combine those detectors into detectors for bigger patterns: a whole wave, or a "
-            "wide, unusual spike. Each layer keeps half as much detail along time ("
-            + " → ".join(str(n) for n in [2 * data.HALF] + [b.shape[1] for b in blocks]) + " positions) while the "
-            f"number of detectors grows to {blocks[-1].shape[0]}. Finally each detector's output is averaged into "
-            f"one number, giving {blocks[-1].shape[0]} numbers that summarise the beat's shape.")
+st.markdown("Three further convolution layers combine small features into larger patterns, such as a complete wave "
+            "or a broad, unusual spike. The time positions reduce from "
+            + " → ".join(str(n) for n in [2 * data.HALF] + [b.shape[1] for b in blocks])
+            + f", while the detectors increase to {blocks[-1].shape[0]}. Averaging each final detector gives "
+            f"{blocks[-1].shape[0]} values describing the beat's shape.")
 
 
 def heat(b, rows=32):
@@ -372,8 +368,8 @@ def heat(b, rows=32):
 
 live("layers", "layers", 330, "The beat flowing through the four layers (brighter = stronger response)",
      x=x0, blocks=[heat(b) for b in blocks], feats=parts["feats"])
-with st.expander("Try it yourself: follow one of the 128 summary numbers", expanded=True):
-    k3 = st.slider(f"Summary number (starts on the one that pushed hardest towards {data.CLASS_NAMES[top]})", 1,
+with st.expander("Follow one of the 128 summary values", expanded=True):
+    k3 = st.slider(f"Summary value (starts with the strongest contribution towards {data.CLASS_NAMES[top]})", 1,
                    blocks[-1].shape[0], int(parts["contrib"][top].argmax()) + 1)
     c1, c2 = st.columns([3, 2])
     with c1:
@@ -391,15 +387,16 @@ with st.expander("Try it yourself: follow one of the 128 summary numbers", expan
         st.table(pd.DataFrame({"type": data.CLASS_NAMES,
                                "push on the score": [f"{v:+.3f}" for v in parts["contrib"][:, k3 - 1]]})
                  .set_index("type"))
-        st.caption("Its average times a learned weight for each type. All 128 pushes added together make the "
-                   "'from the shape' column in step 4.")
+        st.caption("Each average is multiplied by a learned weight for each class. Adding all 128 contributions "
+                   "gives the **from the shape** score in step 4.")
 
 st.subheader("4 · Making the decision")
-st.markdown("Each of the four beat types gets a score: a weighted sum of the shape numbers"
-            + (", plus a weighted sum of the timing numbers," if model.n_rr else "")
-            + " plus a fixed starting point. The scores are then turned into percentages that add up to 100% "
-            "(a step called *softmax*). The diagram builds this beat's scores piece by piece.")
-with st.expander("Try it yourself: switch parts of the score off", expanded=True):
+st.markdown(("Each class gets a score from three parts: the weighted shape features, the weighted timing features "
+             "and a fixed bias." if model.n_rr else
+             "Each class gets a score from two parts: the weighted shape features and a fixed bias.")
+            + " Softmax then turns the four scores into percentages that sum to 100%. The diagram shows the "
+            "calculation for this beat.")
+with st.expander("Switch score components off", expanded=True):
     o1, o2 = st.columns(2)
     no_shape = o1.checkbox("Ignore the shape numbers")
     no_time = o2.checkbox("Ignore the timing numbers", disabled=not model.n_rr)
@@ -407,8 +404,7 @@ with st.expander("Try it yourself: switch parts of the score off", expanded=True
     new4 = explain.softmax(kept)
     if no_shape or no_time:
         st.markdown(verdict(parts["probs"], new4))
-        st.caption("This is arithmetic on the real scores, not a retrained model: it shows how much each part "
-                   "contributes for this beat.")
+        st.caption("This removes a component from the existing score calculation. It does not retrain the model.")
 live("decision", "decision", 260, "Scores built from their parts, then turned into percentages and the alarm",
      names=data.CLASS_NAMES, thr=thr, probs=new4, bias=parts["bias"],
      shape=None if no_shape else parts["shape"], timing=None if (no_time or not model.n_rr) else parts["timing"])
@@ -419,30 +415,30 @@ if model.n_rr:
 cols |= {"starting point": f2(parts["bias"]), "total score": f2(parts["logits"]),
          "percentage": [f"{p:.1%}" for p in parts["probs"]]}
 st.table(pd.DataFrame(cols).set_index("type"))
-st.caption("The table shows the unchanged beat. The alarm uses one number: 100% minus the N-group percentage. If that "
-           f"reaches the threshold ({thr:.2f}), the beat is flagged.")
+st.caption("The table reports the original, unchanged beat. The abnormal score is 100% minus the N-group "
+           f"percentage; the alarm triggers at threshold {thr:.2f}.")
 
 st.subheader("5 · What does it rely on?")
-st.markdown("Change the input and watch the model's answer move. The changed beats are not real recordings, so the "
-            "results say something about this model, not about hearts.")
-with st.expander("Try it yourself: flatten part of the beat or change its timing", expanded=True):
+st.markdown("This section tests how the model responds when an ECG input is edited. These altered beats are not "
+            "actual recordings, so the results describe model behaviour, not how hearts work.")
+with st.expander("Flatten the beat or change its timing", expanded=True):
     e1, e2 = st.columns(2)
     with e1:
         hide = st.checkbox("Flatten part of the beat")
-        lo, hi = st.slider("Stretch to flatten (seconds from the main spike)", float(sec[0]), float(sec[-1]),
+        lo, hi = st.slider("Region to flatten (seconds from the main spike)", float(sec[0]), float(sec[-1]),
                            (-0.1, 0.1), 0.01, disabled=not hide)
     x1 = x0.copy()
     if hide:
         x1[(sec >= lo) & (sec <= hi)] = 0.0  # 0 = the window's average level after rescaling
     with e2:
         if model.n_rr:
-            pre = st.slider("Gap before this beat, compared with the person's average (below 1 = early)", 0.3, 2.0,
+            pre = st.slider("Previous RR / personal average (below 1 = early)", 0.3, 2.0,
                             float(round(r0[0], 2)), 0.01)
             r1 = explain.with_pre_rr(r0, pre)
-            st.caption(f"The real gap was {r0[0]:.2f}× the average. The other timing numbers stay as they were.")
+            st.caption(f"The recorded interval was {r0[0]:.2f}× the person's average. Other timing features are unchanged.")
         else:
             r1 = r0
-            st.caption("This model has no timing input, so only the shape can be changed.")
+            st.caption("This model does not use RR timing. Only the ECG shape can be edited.")
     new = explain.score_parts(model, x1, r1)["probs"]
     c1, c2 = st.columns([3, 2])
     with c1:
@@ -461,15 +457,15 @@ with st.expander("Try it yourself: flatten part of the beat or change its timing
     st.markdown(verdict(parts["probs"], new))
 
 width = (hi - lo) if hide else 0.2
-st.markdown(f"**Automatic sweep:** a {width:.2f} s flattened stretch slides across the beat, and the curve records the "
-            "model's answer at every position. Where the curve moves most is where the model is looking.")
+st.markdown(f"**Automatic sweep:** a {width:.2f} s flattened section moves along the beat. The curve shows how the "
+            "model's output changes at each position, highlighting the parts of the input that affect its prediction most.")
 centres = np.arange(0, 2 * data.HALF, 8)
 hw = int(round(width * fs / 2))
 live("sweep_shape", "sweep", 280, "Flattening each part of the beat in turn", mode="occlude", beat=x0, hw=hw,
      centres=centres, xs=sec[centres], pabn=explain.occlusion_sweep(model, x0, r0, centres, hw),
      base=float(1 - parts["probs"][0]), thr=thr, xlabel="position of the flattened stretch")
 if model.n_rr:
-    st.markdown("**Timing sweep:** the same beat, with the gap before it stretched from very early to very late.")
+    st.markdown("**Timing sweep:** the same ECG beat, with its preceding RR interval varied from very early to very late.")
     pres = np.linspace(0.3, 2.0, 60)
     live("sweep_time", "sweep", 260, "Changing how early this beat arrives", mode="timing", xs=pres, post=float(r0[1]),
          pabn=explain.timing_sweep(model, x0, r0, pres), base=float(1 - parts["probs"][0]), thr=thr,

@@ -94,15 +94,15 @@ def with_pre_rr(r, pre):
 def plain_summary(ref, pred, p_pred, p_abn, thr, status):
     """Headline and sentences for a non-expert. status as in inference.beat_status."""
     if status == 0:
-        head = ("The computer got this beat right." if pred == ref else
-                "Right call: no alarm, although its single top guess named a different type.")
+        head = ("The model classified this beat correctly." if pred == ref else
+                "No alarm was needed, even though the model chose the wrong class.")
     else:
-        head = ["", "Right to raise the alarm, but it named the wrong kind of beat.",
-                "Missed: this beat was unusual and the computer did not raise an alarm.",
-                "False alarm: this was an ordinary-type beat, but the computer raised an alarm."][status]
+        head = ["", "The alarm was correct, but the model chose the wrong class.",
+                "Missed abnormal beat: the model did not raise an alarm.",
+                "False alarm: the model flagged an N-group beat as abnormal."][status]
     alarm = p_abn >= thr
-    lines = [f"Heart experts labelled it as **{PLAIN[ref]}**.",
-             f"The computer's top guess was **{PLAIN[pred]}**, with a score of {p_pred:.0%}.",
-             f"It rated the chance that the beat is not ordinary at **{p_abn:.0%}**. It raises an alarm at "
-             f"{thr:.0%} or more, so it **{'did' if alarm else 'did not'}** raise one."]
+    lines = [f"The cardiologists labelled this beat **{PLAIN[ref]}**.",
+             f"The model predicted **{PLAIN[pred]}**, with a score of {p_pred:.0%}.",
+             f"Its abnormal score was **{p_abn:.0%}**. The alarm threshold is {thr:.0%}, so it "
+             f"**{'did' if alarm else 'did not'}** trigger."]
     return head, lines
